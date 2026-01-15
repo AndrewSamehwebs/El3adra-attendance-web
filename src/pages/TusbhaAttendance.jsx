@@ -83,19 +83,31 @@ export default function TusbhaAttendance() {
     );
   };
 
-  const addChild = async () => {
-    const trimmedName = newChildName.trim();
-    if (!trimmedName) return alert("⚠️ أدخل اسم الطفل");
-    const newChild = { name: trimmedName, days: {}, page: stage };
-    try {
-      const docRef = await addDoc(tusbhaCollection, newChild);
-      setChildren((prev) => [...prev, { id: docRef.id, ...newChild }]);
-      setNewChildName("");
-    } catch (error) {
-      console.error("خطأ في إضافة الطفل:", error);
-      alert("❌ حدث خطأ أثناء الإضافة");
-    }
-  };
+const addChild = async () => {
+  const trimmedName = newChildName.trim();
+  if (!trimmedName) return alert("⚠️ أدخل اسم الطفل");
+
+  // تأكد إن الاسم مش موجود
+  const exists = children.some(
+    (c) => c.name.trim().toLowerCase() === trimmedName.toLowerCase()
+  );
+
+  if (exists) {
+    return alert("⚠️ الاسم ده موجود بالفعل");
+  }
+
+  const newChild = { name: trimmedName, days: {}, page: stage };
+
+  try {
+    const docRef = await addDoc(tusbhaCollection, newChild);
+    setChildren((prev) => [...prev, { id: docRef.id, ...newChild }]);
+    setNewChildName("");
+  } catch (error) {
+    console.error("خطأ في إضافة الطفل:", error);
+    alert("❌ حدث خطأ أثناء الإضافة");
+  }
+};
+
 
   const deleteChild = async (childId) => {
     if (!window.confirm("⚠️ هل أنت متأكد من حذف بيانات هذا الطفل؟")) return;
@@ -125,29 +137,52 @@ export default function TusbhaAttendance() {
     }
   };
 
-  const uploadExcel = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+const uploadExcel = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
 
-    const data = await file.arrayBuffer();
-    const workbook = XLSX.read(data);
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+  const data = await file.arrayBuffer();
+  const workbook = XLSX.read(data);
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-    for (let i = 1; i < jsonData.length; i++) {
-      const row = jsonData[i];
-      const name = row[0];
-      if (!name) continue;
+  // نسخة محلية من الأسماء الموجودة
+  const existingNames = new Set(
+    children.map((c) => c.name.trim().toLowerCase())
+  );
 
-      const newChild = { name: name.toString().trim(), days: {}, page: stage };
-      try {
-        const docRef = await addDoc(tusbhaCollection, newChild);
-        setChildren((prev) => [...prev, { id: docRef.id, ...newChild }]);
-      } catch (error) {
-        console.error("خطأ في رفع الطفل من Excel:", error);
-      }
+  const newChildrenToAdd = [];
+
+  for (let i = 1; i < jsonData.length; i++) {
+    const row = jsonData[i];
+    const name = row[0];
+    if (!name) continue;
+
+    const trimmedName = name.toString().trim();
+    const lowerName = trimmedName.toLowerCase();
+
+    if (existingNames.has(lowerName)) continue;
+
+    existingNames.add(lowerName);
+
+    newChildrenToAdd.push({
+      name: trimmedName,
+      days: {},
+      page: stage,
+    });
+  }
+
+  try {
+    for (const child of newChildrenToAdd) {
+      const docRef = await addDoc(tusbhaCollection, child);
+      setChildren((prev) => [...prev, { id: docRef.id, ...child }]);
     }
-  };
+  } catch (error) {
+    console.error("خطأ في رفع Excel:", error);
+    alert("❌ حصل خطأ أثناء رفع الإكسل");
+  }
+};
+
 
   const handleCutSelected = async (targetStage) => {
     const selectedIds = Object.keys(selectedRows).filter((id) => selectedRows[id]);

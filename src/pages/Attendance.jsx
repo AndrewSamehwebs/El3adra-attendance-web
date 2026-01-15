@@ -63,17 +63,28 @@ export default function AttendancePage() {
     });
   }, 300);
 
-  const addChild = async () => {
-    const name = newChildName.trim();
-    if (!name) return alert("⚠️ أدخل اسم الطفل");
+const addChild = async () => {
+  const name = newChildName.trim();
+  if (!name) return alert("⚠️ أدخل اسم الطفل");
 
-    const newChild = { name, days: {}, page: stage };
-    const ref = doc(attendanceCollection);
-    await setDoc(ref, newChild);
+  const normalized = name.toLowerCase();
 
-    setChildren(prev => [...prev, { id: ref.id, ...newChild }]);
-    setNewChildName("");
-  };
+  const exists = children.some(
+    c => c.name?.trim().toLowerCase() === normalized
+  );
+
+  if (exists) {
+    return alert("⚠️ الاسم ده موجود بالفعل");
+  }
+
+  const newChild = { name, days: {}, page: stage };
+  const ref = doc(attendanceCollection);
+  await setDoc(ref, newChild);
+
+  setChildren(prev => [...prev, { id: ref.id, ...newChild }]);
+  setNewChildName("");
+};
+
 
   const handleCheckboxChange = (id, field, checked) => {
     setChildren(prev =>
@@ -128,26 +139,45 @@ export default function AttendancePage() {
     );
   };
 
-  const handleUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+const handleUpload = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
 
-    const data = await file.arrayBuffer();
-    const workbook = XLSX.read(data);
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+  const data = await file.arrayBuffer();
+  const workbook = XLSX.read(data);
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-    for (let i = 1; i < rows.length; i++) {
-      const name = rows[i][0];
-      if (!name) continue;
+  // الأسماء الموجودة حاليًا
+  const existingNames = new Set(
+    children.map(c => c.name.trim().toLowerCase())
+  );
 
-      const newChild = { name, days: {}, page: stage };
-      const ref = doc(attendanceCollection);
-      await setDoc(ref, newChild);
+  for (let i = 1; i < rows.length; i++) {
+    const rawName = rows[i][0];
+    if (typeof rawName !== "string") continue;
 
-      setChildren(prev => [...prev, { id: ref.id, ...newChild }]);
-    }
-  };
+    const name = rawName.trim();
+    if (!name) continue;
+
+    const normalized = name.toLowerCase();
+
+    // تجاهل العناوين
+    if (normalized === "اسم الطفل" || normalized === "name") continue;
+
+    // منع التكرار
+    if (existingNames.has(normalized)) continue;
+
+    existingNames.add(normalized);
+
+    const newChild = { name, days: {}, page: stage };
+    const ref = doc(attendanceCollection);
+    await setDoc(ref, newChild);
+
+    setChildren(prev => [...prev, { id: ref.id, ...newChild }]);
+  }
+};
+
 
   const filteredChildren = useMemo(() => {
     return children

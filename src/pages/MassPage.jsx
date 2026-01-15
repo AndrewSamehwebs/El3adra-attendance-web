@@ -66,15 +66,20 @@ export default function MassPage() {
     );
   };
 
-  const addChild = async () => {
-    const name = newChildName.trim();
-    if (!name) return alert("⚠️ أدخل اسم الطفل");
+const addChild = async () => {
+  const name = newChildName.trim();
+  if (!name) return alert("⚠️ أدخل اسم الطفل");
 
-    const newChild = { name, days: {}, page: stage };
-    const ref = await addDoc(massCollection, newChild);
-    setChildren(prev => [...prev, { id: ref.id, ...newChild }]);
-    setNewChildName("");
-  };
+  const lowerName = name.toLowerCase();
+  const exists = children.some(c => c.name.trim().toLowerCase() === lowerName);
+  if (exists) return alert("⚠️ الاسم موجود بالفعل");
+
+  const newChild = { name, days: {}, page: stage };
+  const ref = await addDoc(massCollection, newChild);
+  setChildren(prev => [...prev, { id: ref.id, ...newChild }]);
+  setNewChildName("");
+};
+
 
   const deleteChild = async (id) => {
     if (!window.confirm("⚠️ متأكد من الحذف؟")) return;
@@ -92,21 +97,43 @@ export default function MassPage() {
     );
   };
 
-  const uploadExcel = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const data = await file.arrayBuffer();
-    const workbook = XLSX.read(data);
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-    for (let i = 1; i < rows.length; i++) {
-      const name = rows[i][0];
-      if (!name) continue;
-      const newChild = { name: name.toString(), days: {}, page: stage };
-      const ref = await addDoc(massCollection, newChild);
-      setChildren(prev => [...prev, { id: ref.id, ...newChild }]);
+const uploadExcel = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const data = await file.arrayBuffer();
+  const workbook = XLSX.read(data);
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const rowsData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+  // نسخة محلية من الأسماء الموجودة
+  const existingNames = new Set(children.map(c => c.name.trim().toLowerCase()));
+
+  const newChildren = [];
+
+  for (let i = 1; i < rowsData.length; i++) {
+    const name = rowsData[i][0];
+    if (!name) continue;
+    const trimmedName = name.toString().trim();
+    const lowerName = trimmedName.toLowerCase();
+
+    if (existingNames.has(lowerName)) continue;
+
+    existingNames.add(lowerName);
+    newChildren.push({ name: trimmedName, days: {}, page: stage });
+  }
+
+  try {
+    for (const child of newChildren) {
+      const ref = await addDoc(massCollection, child);
+      setChildren(prev => [...prev, { id: ref.id, ...child }]);
     }
-  };
+  } catch (error) {
+    console.error("خطأ في رفع Excel:", error);
+    alert("❌ حدث خطأ أثناء رفع الإكسل");
+  }
+};
+
 
   const filteredChildren = useMemo(() => {
     return children

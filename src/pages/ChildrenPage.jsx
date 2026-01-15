@@ -1,7 +1,16 @@
 // src/pages/ChildrenPage.jsx
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { db } from "../firebase/firebaseConfig";
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  query,
+  where
+} from "firebase/firestore";
 import { debounce } from "lodash";
 import * as XLSX from "xlsx";
 import { useParams } from "react-router-dom";
@@ -20,194 +29,203 @@ export default function ChildrenPage() {
   const { stage } = useParams();
   const [rows, setRows] = useState([]);
   const [search, setSearch] = useState("");
+  const [expandedRow, setExpandedRow] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
-    const month = (now.getMonth() + 1).toString().padStart(2, "0");
-    const year = now.getFullYear();
-    return `${year}-${month}`;
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   });
-  const [currentPage, setCurrentPage] = useState(1);
-  const [showSelection, setShowSelection] = useState(false);
-  const [selectedRows, setSelectedRows] = useState({});
   const rowsPerPage = 10;
-
   const childrenCollection = collection(db, "children");
-
-  // ===== Cache =====
   const cachedRows = useRef(null);
 
-  const excelDateToJSDate = (serial) => {
-    if (!serial) return "";
-    const utc_days = Math.floor(serial - 25569);
-    const utc_value = utc_days * 86400;
-    const date_info = new Date(utc_value * 1000);
-    const month = (date_info.getMonth() + 1).toString().padStart(2, "0");
-    const day = date_info.getDate().toString().padStart(2, "0");
-    const year = date_info.getFullYear();
-    return `${year}-${month}-${day}`;
-  };
-
+  // ================= FETCH =================
   useEffect(() => {
     const fetchData = async () => {
       if (cachedRows.current) {
         setRows(cachedRows.current);
         return;
       }
-      try {
-        const q = query(childrenCollection, where("page", "==", stage));
-        const snapshot = await getDocs(q);
-        const data = snapshot.docs.map(docSnap => ({
-          id: docSnap.id,
-          name: docSnap.data().name || "",
-          phone: docSnap.data().phone || "",
-          address: docSnap.data().address || "",
-          dateOfBirth: docSnap.data().dateOfBirth || "",
-          stage: docSnap.data().stage || "",
-          birthCertificate: docSnap.data().birthCertificate || "",
-          visited: docSnap.data().visited || {},
-          page: docSnap.data().page || stage
-        }));
-        setRows(data);
-        cachedRows.current = data;
-      } catch (error) {
-        console.error("خطأ في جلب البيانات:", error);
-        alert("❌ فشل تحميل البيانات");
-      }
+      const q = query(childrenCollection, where("page", "==", stage));
+      const snapshot = await getDocs(q);
+      const data = snapshot.docs.map(d => ({
+        id: d.id,
+        ...d.data(),
+        name: d.data().name?.trim() || ""
+      }));
+      setRows(data);
+      cachedRows.current = data;
     };
     fetchData();
   }, [stage]);
 
-  const addRow = async () => {
-    const newRow = { name: "", phone: "", address: "", dateOfBirth: "", stage: "", birthCertificate: "", visited: {}, page: stage };
-    try {
-      const docRef = await addDoc(childrenCollection, newRow);
-      setRows(prev => {
-        const updated = [...prev, { id: docRef.id, ...newRow }];
-        cachedRows.current = updated;
-        return updated;
-      });
-    } catch (error) {
-      console.error("خطأ في الإضافة:", error);
-      alert("❌ حدث خطأ أثناء الحفظ");
-    }
-  };
-
+  // ================= UPDATE =================
   const debounceUpdate = useRef(
     debounce(async (id, field, value) => {
-      const docRef = doc(db, "children", id);
-      try {
-        await updateDoc(docRef, { [field]: value });
-      } catch (error) {
-        console.error("خطأ في التحديث:", error);
-        alert("❌ فشل تحديث البيانات");
-      }
-    }, 500)
+      if (field === "name" && value.trim() === "") return;
+      await updateDoc(doc(db, "children", id), { [field]: value });
+    }, 400)
   ).current;
 
   const handleChange = (id, field, value) => {
     setRows(prev => {
-      const updated = prev.map(r => {
-        if (r.id === id) {
-          if (field === "visited") {
-            const newVisited = { ...r.visited, [selectedMonth]: value };
-            debounceUpdate(id, "visited", newVisited);
-            return { ...r, visited: newVisited };
-          } else {
-            debounceUpdate(id, field, value);
-            return { ...r, [field]: value };
-          }
-        }
-        return r;
-      });
+      const updated = prev.map(r => r.id === id ? { ...r, [field]: value } : r);
       cachedRows.current = updated;
       return updated;
     });
+    debounceUpdate(id, field, value);
   };
 
+  // ================= ADD =================
+const addRow = async () => {
+  const newRow = { name: "", phone: "", phone1: "", phone2: "", notes: "", address: "", dateOfBirth: "", stage: "", birthCertificate: "", visited: {}, page: stage };
+
+  // منع التكرار: لو الاسم فارغ أو موجود بالفعل، ما نضيفش
+  const exists = rows.some(r => r.name.trim().toLowerCase() === newRow.name.trim().toLowerCase());
+  if (exists) return alert("⚠️ الاسم موجود بالفعل");
+
+  const docRef = await addDoc(childrenCollection, newRow);
+  const updated = [...rows, { id: docRef.id, ...newRow }];
+  setRows(updated);
+  cachedRows.current = updated;
+};
+
+
+  // ================= DELETE =================
   const handleDelete = async (id) => {
-    if (!window.confirm("⚠️ هل أنت متأكد من حذف بيانات هذا الطفل؟")) return;
-    const docRef = doc(db, "children", id);
-    try {
-      await deleteDoc(docRef);
-      setRows(prev => {
-        const updated = prev.filter(r => r.id !== id);
-        cachedRows.current = updated;
-        return updated;
-      });
-    } catch (error) {
-      console.error("خطأ في الحذف:", error);
-      alert("❌ فشل حذف الصف");
-    }
+    if (!window.confirm("⚠️ هل أنت متأكد من الحذف؟")) return;
+    await deleteDoc(doc(db, "children", id));
+    const updated = rows.filter(r => r.id !== id);
+    setRows(updated);
+    cachedRows.current = updated;
   };
 
+  // ================= RESET VISITS =================
   const handleReset = async () => {
-    if (!window.confirm("⚠️ هل أنت متأكد من إعادة ضبط الزيارات لهذا الشهر؟")) return;
-    const updatedRows = [];
+    if (!window.confirm("⚠️ إعادة ضبط الزيارات لهذا الشهر؟")) return;
+    const updated = [];
     for (const r of rows) {
       const newVisited = { ...r.visited, [selectedMonth]: false };
-      try {
-        const docRef = doc(db, "children", r.id);
-        await updateDoc(docRef, { visited: newVisited });
-      } catch (error) { console.error(error); }
-      updatedRows.push({ ...r, visited: newVisited });
+      await updateDoc(doc(db, "children", r.id), { visited: newVisited });
+      updated.push({ ...r, visited: newVisited });
     }
-    setRows(updatedRows);
-    cachedRows.current = updatedRows;
+    setRows(updated);
+    cachedRows.current = updated;
   };
 
-  const handleUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async (evt) => {
-      const data = new Uint8Array(evt.target.result);
-      const workbook = XLSX.read(data, { type: "array" });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-      for (let i = 1; i < jsonData.length; i++) {
-        const row = jsonData[i];
-        if (!row || row.every(cell => !cell)) continue;
-        const newRow = {
-          name: row[0] || "",
-          phone: row[1] || "",
-          address: row[2] || "",
-          dateOfBirth: typeof row[3] === "number" ? excelDateToJSDate(row[3]) : (row[3] || ""),
-          stage: row[4] || "",
-          birthCertificate: row[5] || "",
-          visited: {},
-          page: stage
-        };
-        try {
-          const docRef = await addDoc(childrenCollection, newRow);
-          setRows(prev => {
-            const updated = [...prev, { id: docRef.id, ...newRow }];
-            cachedRows.current = updated;
-            return updated;
-          });
-        } catch (error) { console.error(error); }
+  // ================= EXCEL UPLOAD =================
+// ================= EXCEL UPLOAD (SMART HEADER MATCHING) =================
+const normalize = (text = "") =>
+  text
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "");
+
+const headerMap = {
+  name: ["اسم", "اسم الطفل", "الاسم", "name"],
+  phone: ["رقم", "رقم الهاتف", "التليفون", "phone"],
+  phone1: ["رقم2", "رقم 2", "هاتف2"],
+  phone2: ["رقم3", "رقم 3", "هاتف3"],
+  notes: ["ملاحظات", "notes", "note"],
+  address: ["العنوان", "عنوان", "address"],
+  dateOfBirth: ["تاريخ الميلاد", "الميلاد", "dob"],
+  stage: ["المرحلة", "stage"],
+  birthCertificate: ["شهادة الميلاد", "شهادة", "birth"]
+};
+
+
+const matchField = (excelHeader) => {
+  const key = normalize(excelHeader);
+  for (const field in headerMap) {
+    if (headerMap[field].some(alias => normalize(alias) === key)) {
+      return field;
+    }
+  }
+  return null;
+};
+
+const readPhones = (value) => {
+  if (!value) return [];
+  return value
+    .toString()
+    .split(/[,\/\- ]+/)
+    .map(v => v.trim())
+    .filter(Boolean);
+};
+
+const handleUpload = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async (evt) => {
+    const data = new Uint8Array(evt.target.result);
+    const workbook = XLSX.read(data, { type: "array" });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+    // Set محلي للأسماء الموجودة بالفعل
+    const existingNames = new Set(rows.map(r => r.name.trim().toLowerCase()));
+
+    const newRows = [];
+
+    for (const row of json) {
+      const cleanRow = {};
+      Object.keys(row).forEach(k => {
+        cleanRow[k.trim()] = row[k];
+      });
+
+      const parseDate = (value) => {
+        if (!value) return "";
+        if (typeof value === "number") return new Date((value - 25569) * 86400 * 1000).toLocaleDateString("en-GB");
+        return value.toString();
+      };
+
+      const newRow = {
+        name: cleanRow["الاسم"]?.toString().trim() || "",
+        phone: cleanRow["رقم التلفون"]?.toString().trim() || "",
+        phone1: cleanRow["رقم التلفون 1"]?.toString().trim() || "",
+        phone2: cleanRow["رقم التلفون 2"]?.toString().trim() || "",
+        notes: cleanRow["ملاحظات"]?.toString().trim() || "",
+        address: cleanRow["العنوان"]?.toString().trim() || "",
+        dateOfBirth: parseDate(cleanRow["تاريخ الميلاد"]),
+        stage: cleanRow["المرحلة"] || "",
+        birthCertificate: cleanRow["شهادة الميلاد"]?.toString().trim() || "",
+        visited: {},
+        page: stage
+      };
+
+      if (!newRow.name) continue;
+      const lowerName = newRow.name.toLowerCase();
+      if (existingNames.has(lowerName)) continue; // تجاهل الاسم المكرر
+      existingNames.add(lowerName);
+
+      newRows.push(newRow);
+    }
+
+    try {
+      for (const child of newRows) {
+        const docRef = await addDoc(childrenCollection, child);
+        setRows(prev => [...prev, { id: docRef.id, ...child }]);
+        cachedRows.current = [...cachedRows.current || [], { id: docRef.id, ...child }];
       }
-    };
-    reader.readAsArrayBuffer(file);
-    e.target.value = "";
-  };
-
-  const handleCutSelected = async (targetStage) => {
-    const selectedIds = Object.keys(selectedRows).filter(id => selectedRows[id]);
-    if (selectedIds.length === 0) return alert("⚠️ اختر الأطفال لنقلهم أولاً");
-    if (!window.confirm(`⚠️ هل أنت متأكد من نقل ${selectedIds.length} طفل إلى ${stageNames[targetStage]}?`)) return;
-
-    for (const id of selectedIds) {
-      const docRef = doc(db, "children", id);
-      await updateDoc(docRef, { page: targetStage });
+      alert(`تم إضافة ${newRows.length} صفوف جديدة بنجاح ✅`);
+    } catch (error) {
+      console.error("خطأ في رفع Excel:", error);
+      alert("❌ حدث خطأ أثناء رفع الإكسل");
     }
-    setRows(prev => {
-      const updated = prev.filter(r => !selectedIds.includes(r.id));
-      cachedRows.current = updated;
-      return updated;
-    });
-    setSelectedRows({});
   };
 
+  reader.readAsArrayBuffer(file);
+};
+ // نهاية handleUpload
+
+
+
+
+
+  // ================= FILTER =================
   const filteredRows = useMemo(() => {
     return rows
       .filter(r => r.name.toLowerCase().includes(search.toLowerCase()))
@@ -221,88 +239,98 @@ export default function ChildrenPage() {
 
   return (
     <div className="min-h-screen p-6">
-      <div className="backdrop-blur-md bg-white/80 p-6 rounded-2xl shadow-xl">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-4 text-center text-red-900 break-words px-2">
-          إدارة بيانات الأطفال
-          <span className="block sm:inline"> – {stageNames[stage]}</span>
+      <div className="bg-white/90 p-6 rounded-2xl shadow-xl">
+        <h1 className="text-2xl font-bold text-center text-red-900 mb-4">
+          إدارة بيانات الأطفال – {stageNames[stage]}
         </h1>
 
-        {/* أدوات التحكم العليا */}
-        <div className="flex flex-wrap gap-2 mb-4 items-center justify-between">
+        {/* ===== أزرار التحكم ===== */}
+        <div className="flex flex-wrap gap-2 mb-4">
           <input type="text" placeholder="🔍 ابحث عن اسم الطفل..." value={search} onChange={e => setSearch(e.target.value)} className="p-2 border rounded-xl flex-1 min-w-[180px]" />
           <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="p-2 border rounded-xl" />
-          <button onClick={addRow} className="px-4 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600 transition">➕ إضافة صف جديد</button>
-          <label className="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 cursor-pointer transition">
-            ⬆️ Upload Excel
-            <input type="file" accept=".xlsx, .xls" onChange={handleUpload} className="hidden" />
+          <button onClick={addRow} className="px-4 py-2 bg-green-500 text-white rounded-xl">➕ إضافة صف</button>
+          <label className="px-4 py-2 bg-blue-500 text-white rounded-xl cursor-pointer">⬆️ Upload Excel
+            <input type="file" hidden onChange={handleUpload} />
           </label>
-          <button onClick={handleReset} className="px-4 py-2 bg-yellow-500 text-white rounded-xl hover:bg-yellow-600 transition">🔄 إعادة ضبط الزيارات</button>
-          <button onClick={() => setShowSelection(true)} className="px-4 py-2 bg-purple-500 text-white rounded-xl hover:bg-purple-600 transition">اختيار الأطفال للنقل</button>
+          <button onClick={handleReset} className="px-4 py-2 bg-yellow-500 text-white rounded-xl">🔄 إعادة ضبط الزيارات</button>
+          <button disabled className="px-4 py-2 bg-purple-500 text-white rounded-xl">🔒 اختيار الأطفال للنقل</button>
         </div>
 
-        {/* زر نقل الأطفال المحددين */}
-        {showSelection && (
-          <div className="mb-4 p-4 border rounded-xl bg-gray-50 flex gap-2 items-center">
-            <span>نقل الأطفال المحددين إلى:</span>
-            <select className="p-2 border rounded" onChange={e => handleCutSelected(e.target.value)} defaultValue="">
-              <option value="" disabled>اختر الصف</option>
-            </select>
-            <button onClick={() => alert("⚠️ هذا الزر مقفول حاليًا")} disabled className="px-4 py-2 bg-gray-400 text-white rounded flex items-center gap-1 cursor-not-allowed opacity-70">🔒 مقفول</button>
-            <button onClick={() => setShowSelection(false)} className="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500">إلغاء</button>
-          </div>
-        )}
-
-        {/* جدول البيانات */}
-        <div className="overflow-x-auto overscroll-contain" style={{ WebkitOverflowScrolling: "touch" }}>
-          <table className="w-full border shadow rounded-xl overflow-hidden text-center min-w-[700px]">
-            <thead className="bg-red-800 text-white text-lg">
-              <tr>
-                <th className="p-3">#</th>
-                <th className="p-3">اسم الطفل</th>
-                <th className="p-3">رقم الهاتف</th>
-                <th className="p-3">العنوان</th>
-                <th className="p-3">تاريخ الميلاد</th>
-                <th className="p-3">المرحلة</th>
-                <th className="p-3">شهادة الميلاد</th>
-                <th className="p-3">تمت الزيارة ✅</th>
-                {showSelection && <th className="p-3">اختيار للنقل</th>}
-                <th className="p-3">حذف</th>
-              </tr>
-            </thead>
-            <tbody>
-              {currentRows.map((row, index) => (
-                <tr key={row.id} className="even:bg-gray-100 text-lg">
+        {/* ===== الجدول ===== */}
+        <table className="w-full border rounded-xl text-center">
+          <thead className="bg-red-800 text-white">
+            <tr>
+              <th className="p-3">#</th>
+              <th className="p-3">اسم الطفل</th>
+              <th className="p-3">تمت الزيارة ✅</th>
+              <th className="p-3">معلومات الطفل</th>
+              <th className="p-3">حذف الطفل ❌</th>
+            </tr>
+          </thead>
+          <tbody>
+            {currentRows.map((row, index) => (
+              <React.Fragment key={row.id}>
+                <tr className="even:bg-gray-100">
                   <td className="p-3">{indexOfFirstRow + index + 1}</td>
-                  <td className="p-3"><input value={row.name} onChange={e => handleChange(row.id, "name", e.target.value)} className="w-full p-1 border rounded" /></td>
-                  <td className="p-3"><input value={row.phone} onChange={e => handleChange(row.id, "phone", e.target.value)} className="w-full p-1 border rounded" /></td>
-                  <td className="p-3"><input value={row.address} onChange={e => handleChange(row.id, "address", e.target.value)} className="w-full p-1 border rounded" /></td>
-                  <td className="p-3"><input value={row.dateOfBirth} onChange={e => handleChange(row.id, "dateOfBirth", e.target.value)} className="w-full p-1 border rounded" /></td>
-                  <td className="p-3"><input value={row.stage} onChange={e => handleChange(row.id, "stage", e.target.value)} className="w-full p-1 border rounded" /></td>
-                  <td className="p-3"><input value={row.birthCertificate} onChange={e => handleChange(row.id, "birthCertificate", e.target.value)} className="w-full p-1 border rounded" /></td>
-                  <td className="p-3"><input type="checkbox" checked={row.visited[selectedMonth] || false} onChange={e => handleChange(row.id, "visited", e.target.checked)} className="w-6 h-6" /></td>
-                  {showSelection && (
-                    <td className="p-3">
-                      <input type="checkbox" checked={!!selectedRows[row.id]} onChange={e => setSelectedRows(prev => ({ ...prev, [row.id]: e.target.checked }))} className="w-6 h-6" />
-                    </td>
-                  )}
-                  <td className="p-3"><button onClick={() => handleDelete(row.id)} className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600">❌</button></td>
+                  <td className="p-3 font-semibold">{row.name}</td>
+                  <td className="p-3">
+                    <input type="checkbox" checked={row.visited?.[selectedMonth] || false} onChange={e => handleChange(row.id, "visited", { ...row.visited, [selectedMonth]: e.target.checked })} className="w-6 h-6" />
+                  </td>
+                  <td className="p-3">
+                    <button onClick={() => setExpandedRow(expandedRow === row.id ? null : row.id)} className="px-4 py-1 bg-red-800 text-white rounded">معلومات الطفل</button>
+                  </td>
+                  <td className="p-3">
+                    <button onClick={() => handleDelete(row.id)} className="px-3 py-1 bg-red-500 text-white rounded">❌ حذف</button>
+                  </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+
+                {expandedRow === row.id && (
+                  <tr className="bg-gray-50">
+                    <td colSpan="5" className="p-4 grid md:grid-cols-2 gap-3">
+                      <input value={row.name} onChange={e => handleChange(row.id,"name",e.target.value)} placeholder="اسم الطفل" className="p-2 border rounded font-semibold" />
+                      <input
+                       value={row.phone1 || ""}
+                       onChange={e => handleChange(row.id, "phone1", e.target.value)}
+                       placeholder="رقم هاتف إضافي 1"
+                       className="p-2 border rounded"
+                      />
+
+                      <input
+                        value={row.phone2 || ""}
+                        onChange={e => handleChange(row.id, "phone2", e.target.value)}
+                        placeholder="رقم هاتف إضافي 2"
+                        className="p-2 border rounded"
+                       />
+
+                       <input
+                         value={row.notes || ""}
+                         onChange={e => handleChange(row.id, "notes", e.target.value)}
+                         placeholder="ملاحظات"
+                         className="p-2 border rounded"
+                        />
+
+
+                      <input value={row.phone || ""} onChange={e => handleChange(row.id,"phone",e.target.value)} placeholder="رقم الهاتف" className="p-2 border rounded" />
+                      <input value={row.address || ""} onChange={e => handleChange(row.id,"address",e.target.value)} placeholder="العنوان" className="p-2 border rounded" />
+                      <input value={row.dateOfBirth || ""} onChange={e => handleChange(row.id,"dateOfBirth",e.target.value)} placeholder="تاريخ الميلاد" className="p-2 border rounded" />
+                      <input value={row.stage || ""} onChange={e => handleChange(row.id,"stage",e.target.value)} placeholder="المرحلة" className="p-2 border rounded" />
+                      <input value={row.birthCertificate || ""} onChange={e => handleChange(row.id,"birthCertificate",e.target.value)} placeholder="شهادة الميلاد" className="p-2 border rounded" />
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
+            ))}
+          </tbody>
+        </table>
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex justify-center items-center gap-2 mt-6 flex-wrap">
-            <button onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1} className="px-3 py-1 rounded border bg-white disabled:opacity-50">السابق</button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-              <button key={page} onClick={() => setCurrentPage(page)} className={`px-3 py-1 rounded border ${currentPage === page ? "bg-red-800 text-white" : "bg-white hover:bg-gray-100"}`}>{page}</button>
+          <div className="flex justify-center gap-2 mt-4">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+              <button key={p} onClick={() => setCurrentPage(p)} className={`px-3 py-1 rounded border ${currentPage === p ? "bg-red-800 text-white" : ""}`}>{p}</button>
             ))}
-            <button onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages} className="px-3 py-1 rounded border bg-white disabled:opacity-50">التالي</button>
           </div>
         )}
-
       </div>
     </div>
   );
