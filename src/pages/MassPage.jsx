@@ -220,7 +220,7 @@ const uploadExcel = async (e) => {
                 return (
                   <tr key={c.id} className="even:bg-gray-100 text-lg">
                     <td className="p-3">{indexOfFirst + i + 1}</td>
-                    <td className="p-3 text-left pr-6">{c.name}</td>
+                    <td className="p-3 text-center break-words">{c.name}</td>
                     <td className="p-3">
                       <input type="checkbox" className="w-6 h-6"
                         checked={d.massPresent || false}

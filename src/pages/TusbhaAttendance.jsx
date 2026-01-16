@@ -304,11 +304,12 @@ const uploadExcel = async (e) => {
             </thead>
             <tbody>
               {currentRows.map((child, idx) => {
-                const dayData = child.days[selectedDate] || { present: false };
+                const dayData = (child.days && child.days[selectedDate]) || { present: false };
+                const childName = child.name || "---"; // لو الاسم مش موجود
                 return (
                   <tr key={child.id} className="even:bg-gray-100 hover:bg-gray-200 transition">
                     <td className="p-3">{indexOfFirstRow + idx + 1}</td>
-                    <td className="p-3 text-left">{child.name}</td>
+                    <td className="p-3 text-center break-words">{childName}</td>
                     <td className="p-3">
                       <input
                         type="checkbox"

@@ -257,7 +257,7 @@ const handleUpload = async (e) => {
         </div>
 
         {/* ===== الجدول ===== */}
-        <table className="w-full border rounded-xl text-center">
+        <table className="w-full border rounded-xl text-center table-fixed">
           <thead className="bg-red-800 text-white">
             <tr>
               <th className="p-3">#</th>
@@ -284,40 +284,80 @@ const handleUpload = async (e) => {
                   </td>
                 </tr>
 
-                {expandedRow === row.id && (
-                  <tr className="bg-gray-50">
-                    <td colSpan="5" className="p-4 grid md:grid-cols-2 gap-3">
-                      <input value={row.name} onChange={e => handleChange(row.id,"name",e.target.value)} placeholder="اسم الطفل" className="p-2 border rounded font-semibold" />
-                      <input
-                       value={row.phone1 || ""}
-                       onChange={e => handleChange(row.id, "phone1", e.target.value)}
-                       placeholder="رقم هاتف إضافي 1"
-                       className="p-2 border rounded"
-                      />
+{expandedRow === row.id && (
+  <tr className="table-row">
+    <td colSpan="5" className="bg-gray-100 p-0">
+      <div className="w-full p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+        
+        <input
+          value={row.name}
+          onChange={e => handleChange(row.id, "name", e.target.value)}
+          placeholder="اسم الطفل"
+          className="p-2 border rounded font-semibold"
+        />
 
-                      <input
-                        value={row.phone2 || ""}
-                        onChange={e => handleChange(row.id, "phone2", e.target.value)}
-                        placeholder="رقم هاتف إضافي 2"
-                        className="p-2 border rounded"
-                       />
+        <input
+          value={row.phone || ""}
+          onChange={e => handleChange(row.id, "phone", e.target.value)}
+          placeholder="رقم الهاتف"
+          className="p-2 border rounded"
+        />
 
-                       <input
-                         value={row.notes || ""}
-                         onChange={e => handleChange(row.id, "notes", e.target.value)}
-                         placeholder="ملاحظات"
-                         className="p-2 border rounded"
-                        />
+        <input
+          value={row.phone1 || ""}
+          onChange={e => handleChange(row.id, "phone1", e.target.value)}
+          placeholder="رقم هاتف إضافي 1"
+          className="p-2 border rounded"
+        />
+
+        <input
+          value={row.phone2 || ""}
+          onChange={e => handleChange(row.id, "phone2", e.target.value)}
+          placeholder="رقم هاتف إضافي 2"
+          className="p-2 border rounded"
+        />
+
+        <input
+          value={row.notes || ""}
+          onChange={e => handleChange(row.id, "notes", e.target.value)}
+          placeholder="ملاحظات"
+          className="p-2 border rounded"
+        />
+
+        <input
+          value={row.address || ""}
+          onChange={e => handleChange(row.id, "address", e.target.value)}
+          placeholder="العنوان"
+          className="p-2 border rounded"
+        />
+
+        <input
+          value={row.dateOfBirth || ""}
+          onChange={e => handleChange(row.id, "dateOfBirth", e.target.value)}
+          placeholder="تاريخ الميلاد"
+          className="p-2 border rounded"
+        />
+
+        <input
+          value={row.stage || ""}
+          onChange={e => handleChange(row.id, "stage", e.target.value)}
+          placeholder="المرحلة"
+          className="p-2 border rounded"
+        />
+
+        <input
+          value={row.birthCertificate || ""}
+          onChange={e => handleChange(row.id, "birthCertificate", e.target.value)}
+          placeholder="شهادة الميلاد"
+          className="p-2 border rounded"
+        />
+
+      </div>
+    </td>
+  </tr>
+)}
 
 
-                      <input value={row.phone || ""} onChange={e => handleChange(row.id,"phone",e.target.value)} placeholder="رقم الهاتف" className="p-2 border rounded" />
-                      <input value={row.address || ""} onChange={e => handleChange(row.id,"address",e.target.value)} placeholder="العنوان" className="p-2 border rounded" />
-                      <input value={row.dateOfBirth || ""} onChange={e => handleChange(row.id,"dateOfBirth",e.target.value)} placeholder="تاريخ الميلاد" className="p-2 border rounded" />
-                      <input value={row.stage || ""} onChange={e => handleChange(row.id,"stage",e.target.value)} placeholder="المرحلة" className="p-2 border rounded" />
-                      <input value={row.birthCertificate || ""} onChange={e => handleChange(row.id,"birthCertificate",e.target.value)} placeholder="شهادة الميلاد" className="p-2 border rounded" />
-                    </td>
-                  </tr>
-                )}
               </React.Fragment>
             ))}
           </tbody>
