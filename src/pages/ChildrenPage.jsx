@@ -256,7 +256,7 @@ const exportChildrenToExcel = () => {
 
   const data = rows.map((child, index) => ({
     "#": index + 1,
-    "اسم الطفل": child.name || "",
+    "الاسم": child.name || "",
     "رقم الهاتف": child.phone || "",
     "رقم هاتف 1": child.phone1 || "",
     "رقم هاتف 2": child.phone2 || "",
@@ -369,7 +369,7 @@ const exportChildrenToExcel = () => {
           <thead className="bg-red-800 text-white">
             <tr>
               <th className="p-3">#</th>
-              <th className="p-3">اسم الطفل</th>
+              <th className="p-3">الاسم</th>
               <th className="p-3">تمت الزيارة ✅</th>
               <th className="p-3">معلومات الطفل</th>
               <th className="p-3">حذف الطفل ❌</th>

@@ -306,7 +306,7 @@ const uploadExcel = async (e) => {
             <thead className="bg-red-800 text-white text-lg sticky top-0">
               <tr>
                 <th className="p-3 w-12">#</th>
-                <th className="p-3 w-60">اسم الطفل</th>
+                <th className="p-3 w-60">الاسم</th>
                 <th className="p-3 w-24">حضور ✅</th>
                 {showSelection && <th className="p-3 w-16">اختيار للنقل</th>}
                 <th className="p-3 w-16">حذف</th>

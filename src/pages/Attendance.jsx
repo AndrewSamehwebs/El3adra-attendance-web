@@ -29,6 +29,7 @@ const STAGE_LABELS = {
 export default function AttendancePage() {
   const { stage } = useParams();
   const stageLabel = STAGE_LABELS[stage] || stage;
+  const [targetStage, setTargetStage] = useState("");
 
   const [children, setChildren] = useState([]);
   const [selectedDate, setSelectedDate] = useState(
@@ -197,6 +198,24 @@ const handleUpload = async (e) => {
     ).length;
   };
 
+const handleMoveSelected = async () => {
+  if (!targetStage) return alert("⚠️ اختر الصف أولًا");
+
+  const idsToMove = Object.keys(selectedRows).filter(id => selectedRows[id]);
+  if (idsToMove.length === 0) return alert("⚠️ اختر طفل واحد على الأقل");
+
+  for (const id of idsToMove) {
+    await updateDoc(doc(db, "attendance", id), {
+      page: targetStage,
+    });
+  }
+
+  setChildren(prev => prev.filter(c => !idsToMove.includes(c.id)));
+  setSelectedRows({});
+  setTargetStage("");
+  setShowSelection(false);
+};
+
   return (
     <div className="min-h-screen p-6">
       <div className="backdrop-blur-md bg-white/90 p-6 rounded-2xl shadow-xl">
@@ -266,15 +285,28 @@ const handleUpload = async (e) => {
         {showSelection && (
           <div className="mb-4 p-4 border rounded-xl bg-gray-50 flex gap-2 items-center">
             <span>نقل المحددين إلى:</span>
-            <select className="p-2 border rounded" disabled>
-              <option>اختر الصف</option>
-            </select>
-            <button
-              disabled
-              className="px-4 py-2 bg-gray-400 text-white rounded cursor-not-allowed opacity-70"
-            >
-              🔒 مقفول
-            </button>
+<select
+  className="p-2 border rounded"
+  value={targetStage}
+  onChange={e => setTargetStage(e.target.value)}
+>
+  <option value="">اختر الصف</option>
+  {Object.entries(STAGE_LABELS).map(([key, label]) => (
+    key !== stage && (
+      <option key={key} value={key}>
+        {label}
+      </option>
+    )
+  ))}
+</select>
+
+<button
+  onClick={handleMoveSelected}
+  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+>
+  🚚 نقل
+</button>
+
             <button
               onClick={() => setShowSelection(false)}
               className="px-4 py-2 bg-gray-400 text-white rounded"
@@ -290,7 +322,7 @@ const handleUpload = async (e) => {
             <thead className="bg-red-800 text-white text-lg">
               <tr>
                 <th className="p-3">#</th>
-                <th className="p-3">اسم الطفل</th>
+                <th className="p-3">الاسم</th>
                 <th className="p-3">حضور</th>
                 <th className="p-3">حضور القداس</th>
                 <th className="p-3">عدد الشهر</th>
