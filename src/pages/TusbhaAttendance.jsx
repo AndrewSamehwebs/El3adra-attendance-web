@@ -216,79 +216,89 @@ const uploadExcel = async (e) => {
             حضور التسبحة - {stageLabel}
         </h1>
 
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-          <input
-            type="text"
-            placeholder="ابحث عن اسم الطفل..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="p-2 border rounded-xl w-full md:w-auto flex-grow"
-          />
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="p-2 border rounded-xl w-full md:w-auto"
-          />
-          <input
-            type="text"
-            placeholder="اضافة اسم الطفل..."
-            value={newChildName}
-            onChange={(e) => setNewChildName(e.target.value)}
-            className="p-2 border rounded-xl w-full md:w-auto"
-          />
-          <label className="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition cursor-pointer">
-            Upload Excel ⬆️
-            <input type="file" accept=".xlsx, .xls" onChange={uploadExcel} className="hidden" />
-          </label>
-          <button
-            onClick={addChild}
-            className="px-4 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600 transition"
-          >
-            ➕ إضافة طفل
-          </button>
-          <button
-            onClick={resetAttendance}
-            className="px-4 py-2 bg-yellow-500 text-white rounded-xl hover:bg-yellow-600 transition"
-          >
-            🔄 إعادة ضبط الحضور
-          </button>
-          <button
-            onClick={() => setShowSelection(true)}
-            className="px-4 py-2 bg-purple-500 text-white rounded-xl hover:bg-purple-600 transition"
-          >
-            اختيار الأطفال للنقل
-          </button>
-        </div>
+<div className="flex flex-wrap items-center gap-2 mb-4">
 
-        {/* نقل الأطفال المحددين تحت الأدوات */}
-        {showSelection && (
-          <div className="mt-4 p-4 border rounded-xl bg-gray-50 flex gap-2 items-center flex-wrap">
-            <span>نقل الأطفال المحددين إلى:</span>
-            <select
-              className="p-2 border rounded"
-              onChange={(e) => handleCutSelected(e.target.value)}
-              defaultValue=""
-            >
-              <option value="" disabled>
-                اختر الصف
-              </option>
-            </select>
-            <button
-              onClick={() => alert("⚠️ هذا الزر مقفول حاليًا")}
-              disabled
-              className="px-4 py-2 bg-gray-400 text-white rounded flex items-center gap-1 cursor-not-allowed opacity-70"
-            >
-              🔒 مقفول
-            </button>
-            <button
-              onClick={() => setShowSelection(false)}
-              className="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500"
-            >
-              إلغاء
-            </button>
-          </div>
-        )}
+  {/* السيرش أول حاجة */}
+  <input
+    type="text"
+    placeholder="ابحث عن اسم الطفل..."
+    value={search}
+    onChange={(e) => setSearch(e.target.value)}
+    className="p-2 border rounded-xl flex-1 min-w-[180px]"
+  />
+
+  {/* التاريخ */}
+  <input
+    type="date"
+    value={selectedDate}
+    onChange={(e) => setSelectedDate(e.target.value)}
+    className="p-2 border rounded-xl w-40"
+  />
+
+  {/* خانة الاسم + زر الإضافة جنب بعض */}
+  <div className="flex gap-2">
+    <input
+      type="text"
+      placeholder="اضافة اسم الطفل..."
+      value={newChildName}
+      onChange={(e) => setNewChildName(e.target.value)}
+      className="p-2 border rounded-xl w-48"
+    />
+    <button
+      onClick={addChild}
+      className="px-4 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600 transition"
+    >
+      ➕ إضافة طفل
+    </button>
+  </div>
+
+  {/* زر رفع الإكسل */}
+  <label className="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition cursor-pointer">
+    Upload Excel ⬆️
+    <input type="file" accept=".xlsx, .xls" onChange={uploadExcel} className="hidden" />
+  </label>
+
+  {/* إعادة ضبط الحضور */}
+  <button
+    onClick={resetAttendance}
+    className="px-4 py-2 bg-yellow-500 text-white rounded-xl hover:bg-yellow-600 transition"
+  >
+    🔄 إعادة ضبط الحضور
+  </button>
+
+  {/* اختيار الأطفال للنقل */}
+  <button
+    onClick={() => setShowSelection(true)}
+    className="px-4 py-2 bg-purple-500 text-white rounded-xl hover:bg-purple-600 transition"
+  >
+    اختيار الأطفال للنقل
+  </button>
+
+</div>
+
+{/* نقل الأطفال المحددين تحت الأدوات */}
+{showSelection && (
+  <div className="mt-4 p-4 border rounded-xl bg-gray-50 flex gap-2 items-center flex-wrap">
+    <span>نقل الأطفال المحددين إلى:</span>
+    <select className="p-2 border rounded" onChange={(e) => handleCutSelected(e.target.value)} defaultValue="">
+      <option value="" disabled>اختر الصف</option>
+    </select>
+    <button
+      onClick={() => alert("⚠️ هذا الزر مقفول حاليًا")}
+      disabled
+      className="px-4 py-2 bg-gray-400 text-white rounded flex items-center gap-1 cursor-not-allowed opacity-70"
+    >
+      🔒 مقفول
+    </button>
+    <button
+      onClick={() => setShowSelection(false)}
+      className="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500"
+    >
+      إلغاء
+    </button>
+  </div>
+)}
+
 
         {/* جدول الأطفال */}
         <div className="overflow-x-auto mt-4">

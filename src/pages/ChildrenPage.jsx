@@ -29,6 +29,7 @@ export default function ChildrenPage() {
   const { stage } = useParams();
   const [rows, setRows] = useState([]);
   const [search, setSearch] = useState("");
+  const [newName, setNewName] = useState("");
   const [expandedRow, setExpandedRow] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedMonth, setSelectedMonth] = useState(() => {
@@ -77,18 +78,42 @@ export default function ChildrenPage() {
   };
 
   // ================= ADD =================
+// ================= ADD =================
 const addRow = async () => {
-  const newRow = { name: "", phone: "", phone1: "", phone2: "", notes: "", address: "", dateOfBirth: "", stage: "", birthCertificate: "", visited: {}, page: stage };
+  if (!newName.trim()) {
+    return alert("⚠️ من فضلك اكتب اسم الطفل أولاً");
+  }
 
-  // منع التكرار: لو الاسم فارغ أو موجود بالفعل، ما نضيفش
-  const exists = rows.some(r => r.name.trim().toLowerCase() === newRow.name.trim().toLowerCase());
-  if (exists) return alert("⚠️ الاسم موجود بالفعل");
+  const exists = rows.some(
+    r => r.name.trim().toLowerCase() === newName.trim().toLowerCase()
+  );
+  if (exists) {
+    return alert("⚠️ الاسم موجود بالفعل");
+  }
+
+  const newRow = {
+    name: newName.trim(),
+    phone: "",
+    phone1: "",
+    phone2: "",
+    notes: "",
+    address: "",
+    dateOfBirth: "",
+    stage: "",
+    birthCertificate: "",
+    visited: {},
+    page: stage
+  };
 
   const docRef = await addDoc(childrenCollection, newRow);
+
   const updated = [...rows, { id: docRef.id, ...newRow }];
   setRows(updated);
   cachedRows.current = updated;
+
+  setNewName("");
 };
+
 
 
   // ================= DELETE =================
@@ -223,6 +248,33 @@ const handleUpload = async (e) => {
 
 
 
+// ================= EXPORT EXCEL =================
+const exportChildrenToExcel = () => {
+  if (!rows.length) {
+    return alert("⚠️ لا توجد بيانات للتصدير");
+  }
+
+  const data = rows.map((child, index) => ({
+    "#": index + 1,
+    "اسم الطفل": child.name || "",
+    "رقم الهاتف": child.phone || "",
+    "رقم هاتف 1": child.phone1 || "",
+    "رقم هاتف 2": child.phone2 || "",
+    "العنوان": child.address || "",
+    "تاريخ الميلاد": child.dateOfBirth || "",
+    "المرحلة": child.stage || "",
+    "ملاحظات": child.notes || ""
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(data);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Children");
+
+  XLSX.writeFile(
+    workbook,
+    `children_${stage}_${new Date().toISOString().slice(0, 10)}.xlsx`
+  );
+};
 
 
   // ================= FILTER =================
@@ -245,16 +297,72 @@ const handleUpload = async (e) => {
         </h1>
 
         {/* ===== أزرار التحكم ===== */}
-        <div className="flex flex-wrap gap-2 mb-4">
-          <input type="text" placeholder="🔍 ابحث عن اسم الطفل..." value={search} onChange={e => setSearch(e.target.value)} className="p-2 border rounded-xl flex-1 min-w-[180px]" />
-          <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="p-2 border rounded-xl" />
-          <button onClick={addRow} className="px-4 py-2 bg-green-500 text-white rounded-xl">➕ إضافة صف</button>
-          <label className="px-4 py-2 bg-blue-500 text-white rounded-xl cursor-pointer">⬆️ Upload Excel
-            <input type="file" hidden onChange={handleUpload} />
-          </label>
-          <button onClick={handleReset} className="px-4 py-2 bg-yellow-500 text-white rounded-xl">🔄 إعادة ضبط الزيارات</button>
-          <button disabled className="px-4 py-2 bg-purple-500 text-white rounded-xl">🔒 اختيار الأطفال للنقل</button>
-        </div>
+<div className="flex flex-wrap gap-2 mb-4">
+
+  {/* البحث أول حاجة */}
+  <input
+    type="text"
+    placeholder="🔍 ابحث عن اسم الطفل..."
+    value={search}
+    onChange={e => setSearch(e.target.value)}
+    className="p-2 border rounded-xl flex-1 min-w-[180px]"
+  />
+
+  {/* التاريخ */}
+  <input
+    type="month"
+    value={selectedMonth}
+    onChange={e => setSelectedMonth(e.target.value)}
+    className="p-2 border rounded-xl"
+  />
+
+  {/* خانة الاسم + زر الإضافة جنب بعض */}
+  <div className="flex gap-2">
+    <input
+      type="text"
+      placeholder="✍️ اكتب اسم الطفل"
+      value={newName}
+      onChange={e => setNewName(e.target.value)}
+      className="p-2 border rounded-xl w-48"
+    />
+    <button
+      onClick={addRow}
+      className="px-4 py-2 bg-green-500 text-white rounded-xl"
+    >
+      ➕ إضافة الاسم
+    </button>
+  </div>
+
+  {/* باقي الأزرار */}
+  <label className="px-4 py-2 bg-blue-500 text-white rounded-xl cursor-pointer">
+    ⬆️ Upload Excel
+    <input type="file" hidden onChange={handleUpload} />
+  </label>
+
+<button
+  onClick={exportChildrenToExcel}
+  className="px-4 py-2 bg-indigo-600 text-white rounded-xl"
+>
+  ⬇️ Export Excel
+</button>
+
+  <button
+    onClick={handleReset}
+    className="px-4 py-2 bg-yellow-500 text-white rounded-xl"
+  >
+    🔄 إعادة ضبط الزيارات
+  </button>
+
+  <button
+    disabled
+    className="px-4 py-2 bg-purple-500 text-white rounded-xl"
+  >
+    🔒 اختيار الأطفال للنقل
+  </button>
+
+</div>
+
+
 
         {/* ===== الجدول ===== */}
         <table className="w-full border rounded-xl text-center table-fixed">
