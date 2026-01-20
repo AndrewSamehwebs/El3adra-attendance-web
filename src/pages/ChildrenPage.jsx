@@ -36,6 +36,9 @@ export default function ChildrenPage() {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   });
+  const [showSelection, setShowSelection] = useState(false);
+  const [selectedRows, setSelectedRows] = useState({});
+  const [targetStage, setTargetStage] = useState("");
   const rowsPerPage = 10;
   const childrenCollection = collection(db, "children");
   const cachedRows = useRef(null);
@@ -78,43 +81,38 @@ export default function ChildrenPage() {
   };
 
   // ================= ADD =================
-// ================= ADD =================
-const addRow = async () => {
-  if (!newName.trim()) {
-    return alert("⚠️ من فضلك اكتب اسم الطفل أولاً");
-  }
+  const addRow = async () => {
+    if (!newName.trim()) {
+      return alert("⚠️ من فضلك اكتب اسم الطفل أولاً");
+    }
 
-  const exists = rows.some(
-    r => r.name.trim().toLowerCase() === newName.trim().toLowerCase()
-  );
-  if (exists) {
-    return alert("⚠️ الاسم موجود بالفعل");
-  }
+    const exists = rows.some(
+      r => r.name.trim().toLowerCase() === newName.trim().toLowerCase()
+    );
+    if (exists) {
+      return alert("⚠️ الاسم موجود بالفعل");
+    }
 
-  const newRow = {
-    name: newName.trim(),
-    phone: "",
-    phone1: "",
-    phone2: "",
-    notes: "",
-    address: "",
-    dateOfBirth: "",
-    stage: "",
-    birthCertificate: "",
-    visited: {},
-    page: stage
+    const newRow = {
+      name: newName.trim(),
+      phone: "",
+      phone1: "",
+      phone2: "",
+      notes: "",
+      address: "",
+      dateOfBirth: "",
+      stage: "",
+      birthCertificate: "",
+      visited: {},
+      page: stage
+    };
+
+    const docRef = await addDoc(childrenCollection, newRow);
+    const updated = [...rows, { id: docRef.id, ...newRow }];
+    setRows(updated);
+    cachedRows.current = updated;
+    setNewName("");
   };
-
-  const docRef = await addDoc(childrenCollection, newRow);
-
-  const updated = [...rows, { id: docRef.id, ...newRow }];
-  setRows(updated);
-  cachedRows.current = updated;
-
-  setNewName("");
-};
-
-
 
   // ================= DELETE =================
   const handleDelete = async (id) => {
@@ -139,7 +137,6 @@ const addRow = async () => {
   };
 
   // ================= EXCEL UPLOAD =================
-// ================= EXCEL UPLOAD (SMART HEADER MATCHING) =================
 const normalize = (text = "") =>
   text
     .toString()
@@ -248,7 +245,7 @@ const handleUpload = async (e) => {
 
 
 
-// ================= EXPORT EXCEL =================
+  // ================= EXPORT EXCEL =================
 const exportChildrenToExcel = () => {
   if (!rows.length) {
     return alert("⚠️ لا توجد بيانات للتصدير");
@@ -277,6 +274,7 @@ const exportChildrenToExcel = () => {
 };
 
 
+
   // ================= FILTER =================
   const filteredRows = useMemo(() => {
     return rows
@@ -297,77 +295,101 @@ const exportChildrenToExcel = () => {
         </h1>
 
         {/* ===== أزرار التحكم ===== */}
-<div className="flex flex-wrap gap-2 mb-4">
+        <div className="flex flex-wrap gap-2 mb-4">
 
-  {/* البحث أول حاجة */}
-  <input
-    type="text"
-    placeholder="🔍 ابحث عن اسم الطفل..."
-    value={search}
-    onChange={e => setSearch(e.target.value)}
-    className="p-2 border rounded-xl flex-1 min-w-[180px]"
-  />
+          <input
+            type="text"
+            placeholder="🔍 ابحث عن اسم الطفل..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="p-2 border rounded-xl flex-1 min-w-[180px]"
+          />
 
-  {/* التاريخ */}
-  <input
-    type="month"
-    value={selectedMonth}
-    onChange={e => setSelectedMonth(e.target.value)}
-    className="p-2 border rounded-xl"
-  />
+          <input
+            type="month"
+            value={selectedMonth}
+            onChange={e => setSelectedMonth(e.target.value)}
+            className="p-2 border rounded-xl"
+          />
 
-  {/* خانة الاسم + زر الإضافة جنب بعض */}
-  <div className="flex gap-2">
-    <input
-      type="text"
-      placeholder="✍️ اكتب اسم الطفل"
-      value={newName}
-      onChange={e => setNewName(e.target.value)}
-      className="p-2 border rounded-xl w-48"
-    />
-    <button
-      onClick={addRow}
-      className="px-4 py-2 bg-green-500 text-white rounded-xl"
-    >
-      ➕ إضافة الاسم
-    </button>
-  </div>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="✍️ اكتب اسم الطفل"
+              value={newName}
+              onChange={e => setNewName(e.target.value)}
+              className="p-2 border rounded-xl w-48"
+            />
+            <button
+              onClick={addRow}
+              className="px-4 py-2 bg-green-500 text-white rounded-xl"
+            >
+              ➕ إضافة الاسم
+            </button>
+          </div>
 
-  {/* باقي الأزرار */}
-  <label className="px-4 py-2 bg-blue-500 text-white rounded-xl cursor-pointer">
-    ⬆️ Upload Excel
-    <input type="file" hidden onChange={handleUpload} />
-  </label>
+          <label className="px-4 py-2 bg-blue-500 text-white rounded-xl cursor-pointer">
+            ⬆️ Upload Excel
+            <input type="file" hidden onChange={handleUpload} />
+          </label>
 
-<button
-  onClick={exportChildrenToExcel}
-  className="px-4 py-2 bg-indigo-600 text-white rounded-xl"
->
-  ⬇️ Export Excel
-</button>
+          <button
+            onClick={exportChildrenToExcel}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-xl"
+          >
+            ⬇️ Export Excel
+          </button>
 
-  <button
-    onClick={handleReset}
-    className="px-4 py-2 bg-yellow-500 text-white rounded-xl"
-  >
-    🔄 إعادة ضبط الزيارات
-  </button>
+          <button
+            onClick={handleReset}
+            className="px-4 py-2 bg-yellow-500 text-white rounded-xl"
+          >
+            🔄 إعادة ضبط الزيارات
+          </button>
 
-  <button
-    disabled
-    className="px-4 py-2 bg-purple-500 text-white rounded-xl"
-  >
-    🔒 اختيار الأطفال للنقل
-  </button>
+          {/* ===== زر النقل المقفول 🔒 ===== */}
+          <button
+            onClick={() => setShowSelection(true)}
+            className="px-4 py-2 bg-purple-500 text-white rounded-xl"
+          >
+            اختيار الأطفال للنقل
+          </button>
 
-</div>
+        </div>
 
+        {/* ===== لوحة النقل المقفول 🔒 ===== */}
+        {showSelection && (
+          <div className="mt-4 p-4 border rounded-xl bg-gray-50 flex gap-2 items-center flex-wrap">
+            <span>نقل الأطفال المحددين إلى:</span>
 
+            <select
+              disabled
+              className="p-2 border rounded bg-gray-200 text-gray-500 cursor-not-allowed"
+            >
+              <option value="">اختر الصف 🔒</option>
+            </select>
+
+            <button
+              disabled
+              className="px-4 py-2 bg-gray-400 text-white rounded flex items-center gap-1 cursor-not-allowed opacity-70"
+            >
+              🔒 مقفول
+            </button>
+
+            <button
+              onClick={() => setShowSelection(false)}
+              className="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500"
+            >
+              إلغاء
+            </button>
+          </div>
+        )}
 
         {/* ===== الجدول ===== */}
         <table className="w-full border rounded-xl text-center table-fixed">
           <thead className="bg-red-800 text-white">
             <tr>
+              {showSelection && <th className="p-3">اختيار</th>}
               <th className="p-3">#</th>
               <th className="p-3">الاسم</th>
               <th className="p-3">تمت الزيارة ✅</th>
@@ -379,93 +401,64 @@ const exportChildrenToExcel = () => {
             {currentRows.map((row, index) => (
               <React.Fragment key={row.id}>
                 <tr className="even:bg-gray-100">
+                  {showSelection && (
+                    <td className="p-3">
+                      <input
+                        type="checkbox"
+                        checked={!!selectedRows[row.id]}
+                        onChange={e =>
+                          setSelectedRows(prev => ({ ...prev, [row.id]: e.target.checked }))
+                        }
+                        className="w-5 h-5"
+                      />
+                    </td>
+                  )}
+
                   <td className="p-3">{indexOfFirstRow + index + 1}</td>
                   <td className="p-3 font-semibold">{row.name}</td>
                   <td className="p-3">
-                    <input type="checkbox" checked={row.visited?.[selectedMonth] || false} onChange={e => handleChange(row.id, "visited", { ...row.visited, [selectedMonth]: e.target.checked })} className="w-6 h-6" />
+                    <input
+                      type="checkbox"
+                      checked={row.visited?.[selectedMonth] || false}
+                      onChange={e => handleChange(row.id, "visited", { ...row.visited, [selectedMonth]: e.target.checked })}
+                      className="w-6 h-6"
+                    />
                   </td>
                   <td className="p-3">
-                    <button onClick={() => setExpandedRow(expandedRow === row.id ? null : row.id)} className="px-4 py-1 bg-red-800 text-white rounded">معلومات الطفل</button>
+                    <button
+                      onClick={() => setExpandedRow(expandedRow === row.id ? null : row.id)}
+                      className="px-4 py-1 bg-red-800 text-white rounded"
+                    >
+                      معلومات الطفل
+                    </button>
                   </td>
                   <td className="p-3">
-                    <button onClick={() => handleDelete(row.id)} className="px-3 py-1 bg-red-500 text-white rounded">❌ حذف</button>
+                    <button
+                      onClick={() => handleDelete(row.id)}
+                      className="px-3 py-1 bg-red-500 text-white rounded"
+                    >
+                      ❌ حذف
+                    </button>
                   </td>
                 </tr>
 
-{expandedRow === row.id && (
-  <tr className="table-row">
-    <td colSpan="5" className="bg-gray-100 p-0">
-      <div className="w-full p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-        
-        <input
-          value={row.name}
-          onChange={e => handleChange(row.id, "name", e.target.value)}
-          placeholder="اسم الطفل"
-          className="p-2 border rounded font-semibold"
-        />
-
-        <input
-          value={row.phone || ""}
-          onChange={e => handleChange(row.id, "phone", e.target.value)}
-          placeholder="رقم الهاتف"
-          className="p-2 border rounded"
-        />
-
-        <input
-          value={row.phone1 || ""}
-          onChange={e => handleChange(row.id, "phone1", e.target.value)}
-          placeholder="رقم هاتف إضافي 1"
-          className="p-2 border rounded"
-        />
-
-        <input
-          value={row.phone2 || ""}
-          onChange={e => handleChange(row.id, "phone2", e.target.value)}
-          placeholder="رقم هاتف إضافي 2"
-          className="p-2 border rounded"
-        />
-
-        <input
-          value={row.notes || ""}
-          onChange={e => handleChange(row.id, "notes", e.target.value)}
-          placeholder="ملاحظات"
-          className="p-2 border rounded"
-        />
-
-        <input
-          value={row.address || ""}
-          onChange={e => handleChange(row.id, "address", e.target.value)}
-          placeholder="العنوان"
-          className="p-2 border rounded"
-        />
-
-        <input
-          value={row.dateOfBirth || ""}
-          onChange={e => handleChange(row.id, "dateOfBirth", e.target.value)}
-          placeholder="تاريخ الميلاد"
-          className="p-2 border rounded"
-        />
-
-        <input
-          value={row.stage || ""}
-          onChange={e => handleChange(row.id, "stage", e.target.value)}
-          placeholder="المرحلة"
-          className="p-2 border rounded"
-        />
-
-        <input
-          value={row.birthCertificate || ""}
-          onChange={e => handleChange(row.id, "birthCertificate", e.target.value)}
-          placeholder="شهادة الميلاد"
-          className="p-2 border rounded"
-        />
-
-      </div>
-    </td>
-  </tr>
-)}
-
-
+                {expandedRow === row.id && (
+                  <tr>
+                    <td colSpan={showSelection ? 6 : 5} className="bg-gray-100 p-0">
+                      <div className="w-full p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <input value={row.name} onChange={e => handleChange(row.id, "name", e.target.value)} placeholder="اسم الطفل" className="p-2 border rounded font-semibold" />
+                        <input value={row.phone || ""} onChange={e => handleChange(row.id, "phone", e.target.value)} placeholder="رقم الهاتف" className="p-2 border rounded" />
+                        <input value={row.phone1 || ""} onChange={e => handleChange(row.id, "phone1", e.target.value)} placeholder="رقم هاتف إضافي 1" className="p-2 border rounded" />
+                        <input value={row.phone2 || ""} onChange={e => handleChange(row.id, "phone2", e.target.value)} placeholder="رقم هاتف إضافي 2" className="p-2 border rounded" />
+                        <input value={row.notes || ""} onChange={e => handleChange(row.id, "notes", e.target.value)} placeholder="ملاحظات" className="p-2 border rounded" />
+                        <input value={row.address || ""} onChange={e => handleChange(row.id, "address", e.target.value)} placeholder="العنوان" className="p-2 border rounded" />
+                        <input value={row.dateOfBirth || ""} onChange={e => handleChange(row.id, "dateOfBirth", e.target.value)} placeholder="تاريخ الميلاد" className="p-2 border rounded" />
+                        <input value={row.stage || ""} onChange={e => handleChange(row.id, "stage", e.target.value)} placeholder="المرحلة" className="p-2 border rounded" />
+                        <input value={row.birthCertificate || ""} onChange={e => handleChange(row.id, "birthCertificate", e.target.value)} placeholder="شهادة الميلاد" className="p-2 border rounded" />
+                      </div>
+                    </td>
+                  </tr>
+                )}
               </React.Fragment>
             ))}
           </tbody>
@@ -479,6 +472,7 @@ const exportChildrenToExcel = () => {
             ))}
           </div>
         )}
+
       </div>
     </div>
   );
