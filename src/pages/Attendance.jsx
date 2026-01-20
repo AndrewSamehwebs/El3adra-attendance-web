@@ -282,39 +282,34 @@ const handleMoveSelected = async () => {
         </div>
 
         {/* زر النقل المقفول */}
-        {showSelection && (
-          <div className="mb-4 p-4 border rounded-xl bg-gray-50 flex gap-2 items-center">
-            <span>نقل المحددين إلى:</span>
-<select
-  className="p-2 border rounded"
-  value={targetStage}
-  onChange={e => setTargetStage(e.target.value)}
->
-  <option value="">اختر الصف</option>
-  {Object.entries(STAGE_LABELS).map(([key, label]) => (
-    key !== stage && (
-      <option key={key} value={key}>
-        {label}
-      </option>
-    )
-  ))}
-</select>
+{showSelection && (
+  <div className="mb-4 p-4 border rounded-xl bg-gray-50 flex gap-2 items-center flex-wrap">
+    <span>نقل المحددين إلى:</span>
 
-<button
-  onClick={handleMoveSelected}
-  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
->
-  🚚 نقل
-</button>
+    {/* select مقفول */}
+    <select
+      disabled
+      className="p-2 border rounded bg-gray-200 text-gray-500 cursor-not-allowed"
+    >
+      <option>اختر الصف 🔒</option>
+    </select>
 
-            <button
-              onClick={() => setShowSelection(false)}
-              className="px-4 py-2 bg-gray-400 text-white rounded"
-            >
-              إلغاء
-            </button>
-          </div>
-        )}
+    {/* زر نقل مقفول */}
+    <button
+      disabled
+      className="px-4 py-2 bg-gray-400 text-white rounded cursor-not-allowed opacity-70 flex items-center gap-1"
+    >
+      🔒 مقفول
+    </button>
+
+    <button
+      onClick={() => setShowSelection(false)}
+      className="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500"
+    >
+      إلغاء
+    </button>
+  </div>
+)}
 
         {/* الجدول */}
         <div className="overflow-x-auto">
