@@ -39,6 +39,19 @@ export default function TusbhaAttendance() {
   const [showSelection, setShowSelection] = useState(false);
   const [selectedRows, setSelectedRows] = useState({});
   const rowsPerPage = 10;
+  // حساب عدد الحضور في نفس الشهر
+const getMonthlyAttendanceForChild = (child) => {
+  if (!child.days || !selectedDate) return 0;
+
+  const selectedMonth = selectedDate.slice(0, 7); // YYYY-MM
+
+  return Object.keys(child.days).filter(
+    (dateKey) =>
+      dateKey.startsWith(selectedMonth) &&
+      child.days[dateKey]?.present === true
+  ).length;
+};
+
 
   const tusbhaCollection = collection(db, "tusbha");
 
@@ -308,6 +321,7 @@ const uploadExcel = async (e) => {
                 <th className="p-3 w-12">#</th>
                 <th className="p-3 w-60">الاسم</th>
                 <th className="p-3 w-24">حضور ✅</th>
+                <th className="p-3 w-28 text-center">عدد الحضور</th>
                 {showSelection && <th className="p-3 w-16">اختيار للنقل</th>}
                 <th className="p-3 w-16">حذف</th>
               </tr>
@@ -328,6 +342,11 @@ const uploadExcel = async (e) => {
                         onChange={(e) => handleCheckboxChange(child.id, e.target.checked)}
                       />
                     </td>
+                   
+<td className="p-3 font-bold text-red-700">
+  {getMonthlyAttendanceForChild(child)}
+</td>
+
                     {showSelection && (
                       <td className="p-3">
                         <input
