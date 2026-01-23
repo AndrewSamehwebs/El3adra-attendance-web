@@ -285,31 +285,19 @@ const exportChildrenToExcel = () => {
     `children_${stage}_${new Date().toISOString().slice(0, 10)}.xlsx`
   );
 };
-
-
-
-  // ================= FILTER =================
-  const filteredRows = useMemo(() => {
-  // ================= MONTHLY VISITS COUNT =================
-const monthlyVisits = useMemo(() => {
+// ================= DAILY VISITS COUNT =================
+const dailyVisits = useMemo(() => {
   const counts = {};
 
   rows.forEach(child => {
     const visited = child.visited || {};
 
-    let count = 0;
-
-    Object.keys(visited).forEach(date => {
-      if (date.startsWith(selectedMonth) && visited[date]) {
-        count++;
-      }
-    });
-
-    counts[child.id] = count;
+    // لو متزار النهارده = 1 غير كدة 0
+    {dailyVisits[row.id] || 0}
   });
 
   return counts;
-}, [rows, selectedMonth]);
+}, [rows, today]);
 
     return rows
       .filter(r => r.name.toLowerCase().includes(search.toLowerCase()))
@@ -337,13 +325,6 @@ const monthlyVisits = useMemo(() => {
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="p-2 border rounded-xl flex-1 min-w-[180px]"
-          />
-
-          <input
-            type="month"
-            value={selectedMonth}
-            onChange={e => setSelectedMonth(e.target.value)}
-            className="p-2 border rounded-xl"
           />
 
           <div className="flex gap-2">
