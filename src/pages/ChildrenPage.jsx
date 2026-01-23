@@ -173,6 +173,7 @@ const handleUpload = async (e) => {
           dateOfBirth: parseDate(cleanRow["تاريخ الميلاد"]),
           stage: cleanRow["المرحلة"] || "",
           birthCertificate: cleanRow["شهادة الميلاد"]?.toString().trim() || "",
+          school: cleanRow["المدرسة"]?.toString().trim() || "",
           visited: {},
           page: stage
         };
@@ -218,6 +219,7 @@ const handleUpload = async (e) => {
       "تاريخ الميلاد": child.dateOfBirth || "",
       "المرحلة": child.stage || "",
       "ملاحظات": child.notes || ""
+      "المدرسة": child.school || ""
     }));
     const worksheet = XLSX.utils.json_to_sheet(data);
     const workbook = XLSX.utils.book_new();
