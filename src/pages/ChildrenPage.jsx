@@ -33,6 +33,7 @@ export default function ChildrenPage() {
   const [expandedRow, setExpandedRow] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedMonth, setSelectedMonth] = useState(() => {
+  const today = new Date().toISOString().split("T")[0];
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   });
@@ -277,6 +278,27 @@ const exportChildrenToExcel = () => {
 
   // ================= FILTER =================
   const filteredRows = useMemo(() => {
+  // ================= MONTHLY VISITS COUNT =================
+const monthlyVisits = useMemo(() => {
+  const counts = {};
+
+  rows.forEach(child => {
+    const visited = child.visited || {};
+
+    let count = 0;
+
+    Object.keys(visited).forEach(date => {
+      if (date.startsWith(selectedMonth) && visited[date]) {
+        count++;
+      }
+    });
+
+    counts[child.id] = count;
+  });
+
+  return counts;
+}, [rows, selectedMonth]);
+
     return rows
       .filter(r => r.name.toLowerCase().includes(search.toLowerCase()))
       .sort((a, b) => a.name.localeCompare(b.name, "ar"));
@@ -393,6 +415,7 @@ const exportChildrenToExcel = () => {
               <th className="p-3">#</th>
               <th className="p-3">الاسم</th>
               <th className="p-3">تمت الزيارة ✅</th>
+              <th className="p-3">زيارات الشهر 🔢</th>
               <th className="p-3">معلومات الطفل</th>
               <th className="p-3">حذف الطفل ❌</th>
             </tr>
@@ -405,10 +428,14 @@ const exportChildrenToExcel = () => {
                     <td className="p-3">
                       <input
                         type="checkbox"
-                        checked={!!selectedRows[row.id]}
-                        onChange={e =>
-                          setSelectedRows(prev => ({ ...prev, [row.id]: e.target.checked }))
-                        }
+checked={row.visited?.[today] || false}
+onChange={e =>
+  handleChange(
+    row.id,
+    "visited",
+    { ...row.visited, [today]: e.target.checked }
+  )
+}
                         className="w-5 h-5"
                       />
                     </td>
