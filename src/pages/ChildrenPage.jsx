@@ -26,22 +26,34 @@ const stageNames = {
 };
 
 export default function ChildrenPage() {
+
+  // ===== التاريخ الحالي (يتستخدم في الزيارات اليومية) =====
+  const today = new Date().toISOString().split("T")[0];
+
   const { stage } = useParams();
+
+  // ===== States =====
   const [rows, setRows] = useState([]);
   const [search, setSearch] = useState("");
   const [newName, setNewName] = useState("");
   const [expandedRow, setExpandedRow] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+
+  // الشهر الحالي للزيارات الشهرية
   const [selectedMonth, setSelectedMonth] = useState(() => {
-  const today = new Date().toISOString().split("T")[0];
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   });
+
   const [showSelection, setShowSelection] = useState(false);
   const [selectedRows, setSelectedRows] = useState({});
   const [targetStage, setTargetStage] = useState("");
+
+  // ===== Constants =====
   const rowsPerPage = 10;
   const childrenCollection = collection(db, "children");
+
+  // ===== Cache =====
   const cachedRows = useRef(null);
 
   // ================= FETCH =================
