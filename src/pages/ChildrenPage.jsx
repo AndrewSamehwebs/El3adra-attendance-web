@@ -305,6 +305,12 @@ const getVisitsThisMonth = (visited) => {
                         <input value={row.dateOfBirth||""} onChange={e=>handleChange(row.id,"dateOfBirth",e.target.value)} placeholder="تاريخ الميلاد" className="p-2 border rounded"/>
                         <input value={row.stage||""} onChange={e=>handleChange(row.id,"stage",e.target.value)} placeholder="المرحلة" className="p-2 border rounded"/>
                         <input value={row.birthCertificate||""} onChange={e=>handleChange(row.id,"birthCertificate",e.target.value)} placeholder="شهادة الميلاد" className="p-2 border rounded"/>
+                        <input
+          value={row.school || ""}
+          onChange={e => handleChange(row.id, "school", e.target.value)}
+          placeholder="المدرسة"
+          className="p-2 border rounded"
+        />
                       </div>
                     </td>
                   </tr>
