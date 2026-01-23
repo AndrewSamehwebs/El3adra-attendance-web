@@ -101,38 +101,45 @@ const uploadExcel = async (e) => {
   const file = e.target.files[0];
   if (!file) return;
 
-  const data = await file.arrayBuffer();
-  const workbook = XLSX.read(data);
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const rowsData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-
-  // نسخة محلية من الأسماء الموجودة
-  const existingNames = new Set(children.map(c => c.name.trim().toLowerCase()));
-
-  const newChildren = [];
-
-  for (let i = 1; i < rowsData.length; i++) {
-    const name = rowsData[i][0];
-    if (!name) continue;
-    const trimmedName = name.toString().trim();
-    const lowerName = trimmedName.toLowerCase();
-
-    if (existingNames.has(lowerName)) continue;
-
-    existingNames.add(lowerName);
-    newChildren.push({ name: trimmedName, days: {}, page: stage });
-  }
-
   try {
+    const data = await file.arrayBuffer();
+    const workbook = XLSX.read(data);
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rowsData = XLSX.utils.sheet_to_json(sheet, { defval: "", raw: false });
+
+    // نسخة محلية من الأسماء الموجودة
+    const existingNames = new Set(children.map(c => c.name.trim().toLowerCase()));
+    const newChildren = [];
+
+    for (const row of rowsData) {
+      // تأكد إن العمود موجود
+      const rawName = row["الاسم"];
+      if (!rawName) continue;
+
+      const trimmedName = rawName.toString().trim();
+      const lowerName = trimmedName.toLowerCase();
+
+      // منع التكرار
+      if (existingNames.has(lowerName)) continue;
+
+      existingNames.add(lowerName);
+      newChildren.push({ name: trimmedName, days: {}, page: stage });
+    }
+
+    if (newChildren.length === 0) return alert("⚠️ لا توجد بيانات صالحة لإضافتها");
+
     for (const child of newChildren) {
       const ref = await addDoc(massCollection, child);
       setChildren(prev => [...prev, { id: ref.id, ...child }]);
     }
-  } catch (error) {
-    console.error("خطأ في رفع Excel:", error);
-    alert("❌ حدث خطأ أثناء رفع الإكسل");
+
+    alert(`تم إضافة ${newChildren.length} صفوف جديدة بنجاح ✅`);
+  } catch (err) {
+    console.error("خطأ في رفع Excel:", err);
+    alert("❌ حدث خطأ أثناء رفع الإكسل. تأكد من أن الملف صالح وعمود 'الاسم' موجود");
   }
 };
+
 
 
   const filteredChildren = useMemo(() => {

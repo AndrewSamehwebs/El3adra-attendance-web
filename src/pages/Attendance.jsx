@@ -144,38 +144,46 @@ const handleUpload = async (e) => {
   const file = e.target.files[0];
   if (!file) return;
 
-  const data = await file.arrayBuffer();
-  const workbook = XLSX.read(data);
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+  try {
+    const data = await file.arrayBuffer();
+    const workbook = XLSX.read(data);
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
 
-  // الأسماء الموجودة حاليًا
-  const existingNames = new Set(
-    children.map(c => c.name.trim().toLowerCase())
-  );
+    if (!rows.length) return alert("❌ الملف فارغ");
 
-  for (let i = 1; i < rows.length; i++) {
-    const rawName = rows[i][0];
-    if (typeof rawName !== "string") continue;
+    // التحقق من الأعمدة الأساسية
+    const requiredColumns = ["الاسم"];
+    const fileColumns = Object.keys(rows[0]).map(c => c.trim());
+    const missingColumns = requiredColumns.filter(c => !fileColumns.includes(c));
+    if (missingColumns.length) {
+      return alert(`❌ الملف غير صالح، الأعمدة المفقودة: ${missingColumns.join(", ")}`);
+    }
 
-    const name = rawName.trim();
-    if (!name) continue;
+    const existingNames = new Set(children.map(c => c.name.trim().toLowerCase()));
+    let addedCount = 0;
 
-    const normalized = name.toLowerCase();
+    for (const row of rows) {
+      const name = row["الاسم"]?.toString().trim();
+      if (!name) continue;
 
-    // تجاهل العناوين
-    if (normalized === "اسم الطفل" || normalized === "name") continue;
+      const normalized = name.toLowerCase();
+      if (existingNames.has(normalized)) continue;
 
-    // منع التكرار
-    if (existingNames.has(normalized)) continue;
+      existingNames.add(normalized);
 
-    existingNames.add(normalized);
+      const newChild = { name, days: {}, page: stage };
+      const ref = doc(attendanceCollection);
+      await setDoc(ref, newChild);
 
-    const newChild = { name, days: {}, page: stage };
-    const ref = doc(attendanceCollection);
-    await setDoc(ref, newChild);
+      setChildren(prev => [...prev, { id: ref.id, ...newChild }]);
+      addedCount++;
+    }
 
-    setChildren(prev => [...prev, { id: ref.id, ...newChild }]);
+    alert(`✅ تم إضافة ${addedCount} صفوف جديدة بنجاح`);
+  } catch (error) {
+    console.error("خطأ في رفع الإكسل:", error);
+    alert("❌ حدث خطأ أثناء رفع الملف، تأكد أنه ملف إكسل صالح");
   }
 };
 
