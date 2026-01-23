@@ -328,7 +328,7 @@ const uploadExcel = async (e) => {
                 return (
                   <tr key={child.id} className="even:bg-gray-100 hover:bg-gray-200 transition">
                     <td className="p-3">{indexOfFirstRow + idx + 1}</td>
-                    <td className="p-3 text-center break-words">{childName}</td>
+                    <td className="p-3 font-bold text-center break-words">{childName}</td>
                     <td className="p-3">
                       <input
                         type="checkbox"
