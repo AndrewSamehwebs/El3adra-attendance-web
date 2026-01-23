@@ -275,6 +275,34 @@ const exportChildrenToExcel = () => {
     "المرحلة": child.stage || "",
     "ملاحظات": child.notes || ""
   }));
+// ================= MONTHLY VISITS COUNT =================
+const monthlyVisits = useMemo(() => {
+  const counts = {};
+
+  rows.forEach(child => {
+    const visited = child.visited || {};
+
+    let count = 0;
+
+    Object.keys(visited).forEach(date => {
+      if (date.startsWith(selectedMonth) && visited[date]) {
+        count++;
+      }
+    });
+
+    counts[child.id] = count;
+  });
+
+  return counts;
+}, [rows, selectedMonth]);
+
+// ================= FILTER =================
+const filteredRows = useMemo(() => {
+  return rows
+    .filter(r => r.name.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => a.name.localeCompare(b.name, "ar"));
+}, [rows, search]);
+
 
   const worksheet = XLSX.utils.json_to_sheet(data);
   const workbook = XLSX.utils.book_new();
@@ -285,19 +313,6 @@ const exportChildrenToExcel = () => {
     `children_${stage}_${new Date().toISOString().slice(0, 10)}.xlsx`
   );
 };
-// ================= DAILY VISITS COUNT =================
-const dailyVisits = useMemo(() => {
-  const counts = {};
-
-  rows.forEach(child => {
-    const visited = child.visited || {};
-
-    // لو متزار النهارده = 1 غير كدة 0
-    {dailyVisits[row.id] || 0}
-  });
-
-  return counts;
-}, [rows, today]);
 
     return rows
       .filter(r => r.name.toLowerCase().includes(search.toLowerCase()))
@@ -429,6 +444,7 @@ onChange={e =>
     { ...row.visited, [today]: e.target.checked }
   )
 }
+
                         className="w-5 h-5"
                       />
                     </td>
@@ -444,6 +460,9 @@ onChange={e =>
                       className="w-6 h-6"
                     />
                   </td>
+<td className="p-3 font-bold text-blue-700">
+  {monthlyVisits[row.id] || 0}
+</td>
                   <td className="p-3">
                     <button
                       onClick={() => setExpandedRow(expandedRow === row.id ? null : row.id)}
