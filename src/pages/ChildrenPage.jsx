@@ -218,8 +218,8 @@ const handleUpload = async (e) => {
       "العنوان": child.address || "",
       "تاريخ الميلاد": child.dateOfBirth || "",
       "المرحلة": child.stage || "",
-      "ملاحظات": child.notes || ""
-      "المدرسة": child.school || ""
+      "ملاحظات": child.notes || "",
+      "المدرسة": child.school || "",
     }));
     const worksheet = XLSX.utils.json_to_sheet(data);
     const workbook = XLSX.utils.book_new();
@@ -334,3 +334,4 @@ const getVisitsThisMonth = (visited) => {
     </div>
   );
 }
+
