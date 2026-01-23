@@ -126,29 +126,45 @@ export default function ChildrenPage() {
     cachedRows.current = updated;
   };
 
-  // ================= EXCEL UPLOAD =================
-  const handleUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async (evt) => {
+// ================= EXCEL UPLOAD =================
+const handleUpload = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async (evt) => {
+    try {
       const data = new Uint8Array(evt.target.result);
       const workbook = XLSX.read(data, { type: "array" });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+      if (!json.length) {
+        alert("❌ الملف فارغ أو غير صالح");
+        return;
+      }
+
       const existingNames = new Set(rows.map(r => r.name.trim().toLowerCase()));
       const newRows = [];
 
       for (const row of json) {
         const cleanRow = {};
         Object.keys(row).forEach(k => { cleanRow[k.trim()] = row[k]; });
+
+        // ===== التحقق الأساسي =====
+        if (!cleanRow["الاسم"] || typeof cleanRow["الاسم"] !== "string") {
+          alert("❌ هذا الملف ليس ملائم للموقع (العمود 'الاسم' مفقود أو غير صحيح)");
+          return;
+        }
+
         const parseDate = (value) => {
           if (!value) return "";
           if (typeof value === "number") return new Date((value - 25569) * 86400 * 1000).toLocaleDateString("en-GB");
           return value.toString();
         };
+
         const newRow = {
-          name: cleanRow["الاسم"]?.toString().trim() || "",
+          name: cleanRow["الاسم"].toString().trim(),
           phone: cleanRow["رقم التلفون"]?.toString().trim() || "",
           phone1: cleanRow["رقم التلفون 1"]?.toString().trim() || "",
           phone2: cleanRow["رقم التلفون 2"]?.toString().trim() || "",
@@ -160,27 +176,34 @@ export default function ChildrenPage() {
           visited: {},
           page: stage
         };
-        if (!newRow.name) continue;
+
         const lowerName = newRow.name.toLowerCase();
-        if (existingNames.has(lowerName)) continue;
+        if (existingNames.has(lowerName)) continue; // منع التكرار
         existingNames.add(lowerName);
         newRows.push(newRow);
       }
 
-      try {
-        for (const child of newRows) {
-          const docRef = await addDoc(childrenCollection, child);
-          setRows(prev => [...prev, { id: docRef.id, ...child }]);
-          cachedRows.current = [...cachedRows.current || [], { id: docRef.id, ...child }];
-        }
-        alert(`تم إضافة ${newRows.length} صفوف جديدة بنجاح ✅`);
-      } catch (error) {
-        console.error("خطأ في رفع Excel:", error);
-        alert("❌ حدث خطأ أثناء رفع الإكسل");
+      if (!newRows.length) {
+        alert("⚠️ لا توجد صفوف جديدة للإضافة");
+        return;
       }
-    };
-    reader.readAsArrayBuffer(file);
+
+      // ===== إضافة الصفوف الجديدة =====
+      for (const child of newRows) {
+        const docRef = await addDoc(childrenCollection, child);
+        setRows(prev => [...prev, { id: docRef.id, ...child }]);
+        cachedRows.current = [...cachedRows.current || [], { id: docRef.id, ...child }];
+      }
+
+      alert(`✅ تم إضافة ${newRows.length} صفوف جديدة بنجاح`);
+    } catch (error) {
+      console.error("خطأ في رفع Excel:", error);
+      alert("❌ حدث خطأ أثناء رفع الإكسل، الملف غير صالح");
+    }
   };
+  reader.readAsArrayBuffer(file);
+};
+
 
   // ================= EXPORT EXCEL =================
   const exportChildrenToExcel = () => {
