@@ -26,34 +26,18 @@ const stageNames = {
 };
 
 export default function ChildrenPage() {
-
-  // ===== التاريخ الحالي (يتستخدم في الزيارات اليومية) =====
-  const today = new Date().toISOString().split("T")[0];
-
   const { stage } = useParams();
-
-  // ===== States =====
   const [rows, setRows] = useState([]);
   const [search, setSearch] = useState("");
   const [newName, setNewName] = useState("");
   const [expandedRow, setExpandedRow] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-
-  // الشهر الحالي للزيارات الشهرية
-  const [selectedMonth, setSelectedMonth] = useState(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  });
-
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const [selectedDay, setSelectedDay] = useState(todayKey);
   const [showSelection, setShowSelection] = useState(false);
   const [selectedRows, setSelectedRows] = useState({});
-  const [targetStage, setTargetStage] = useState("");
-
-  // ===== Constants =====
   const rowsPerPage = 10;
   const childrenCollection = collection(db, "children");
-
-  // ===== Cache =====
   const cachedRows = useRef(null);
 
   // ================= FETCH =================
@@ -95,16 +79,9 @@ export default function ChildrenPage() {
 
   // ================= ADD =================
   const addRow = async () => {
-    if (!newName.trim()) {
-      return alert("⚠️ من فضلك اكتب اسم الطفل أولاً");
-    }
-
-    const exists = rows.some(
-      r => r.name.trim().toLowerCase() === newName.trim().toLowerCase()
-    );
-    if (exists) {
+    if (!newName.trim()) return alert("⚠️ من فضلك اكتب اسم الطفل أولاً");
+    if (rows.some(r => r.name.trim().toLowerCase() === newName.trim().toLowerCase()))
       return alert("⚠️ الاسم موجود بالفعل");
-    }
 
     const newRow = {
       name: newName.trim(),
@@ -138,10 +115,10 @@ export default function ChildrenPage() {
 
   // ================= RESET VISITS =================
   const handleReset = async () => {
-    if (!window.confirm("⚠️ إعادة ضبط الزيارات لهذا الشهر؟")) return;
+    if (!window.confirm(`⚠️ إعادة ضبط الزيارات لهذا اليوم؟`)) return;
     const updated = [];
     for (const r of rows) {
-      const newVisited = { ...r.visited, [selectedMonth]: false };
+      const newVisited = { ...r.visited, [selectedDay]: false };
       await updateDoc(doc(db, "children", r.id), { visited: newVisited });
       updated.push({ ...r, visited: newVisited });
     }
@@ -150,173 +127,85 @@ export default function ChildrenPage() {
   };
 
   // ================= EXCEL UPLOAD =================
-const normalize = (text = "") =>
-  text
-    .toString()
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, "");
+  const handleUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      const data = new Uint8Array(evt.target.result);
+      const workbook = XLSX.read(data, { type: "array" });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+      const existingNames = new Set(rows.map(r => r.name.trim().toLowerCase()));
+      const newRows = [];
 
-const headerMap = {
-  name: ["اسم", "اسم الطفل", "الاسم", "name"],
-  phone: ["رقم", "رقم الهاتف", "التليفون", "phone"],
-  phone1: ["رقم2", "رقم 2", "هاتف2"],
-  phone2: ["رقم3", "رقم 3", "هاتف3"],
-  notes: ["ملاحظات", "notes", "note"],
-  address: ["العنوان", "عنوان", "address"],
-  dateOfBirth: ["تاريخ الميلاد", "الميلاد", "dob"],
-  stage: ["المرحلة", "stage"],
-  birthCertificate: ["شهادة الميلاد", "شهادة", "birth"]
-};
-
-
-const matchField = (excelHeader) => {
-  const key = normalize(excelHeader);
-  for (const field in headerMap) {
-    if (headerMap[field].some(alias => normalize(alias) === key)) {
-      return field;
-    }
-  }
-  return null;
-};
-
-const readPhones = (value) => {
-  if (!value) return [];
-  return value
-    .toString()
-    .split(/[,\/\- ]+/)
-    .map(v => v.trim())
-    .filter(Boolean);
-};
-
-const handleUpload = async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = async (evt) => {
-    const data = new Uint8Array(evt.target.result);
-    const workbook = XLSX.read(data, { type: "array" });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-
-    // Set محلي للأسماء الموجودة بالفعل
-    const existingNames = new Set(rows.map(r => r.name.trim().toLowerCase()));
-
-    const newRows = [];
-
-    for (const row of json) {
-      const cleanRow = {};
-      Object.keys(row).forEach(k => {
-        cleanRow[k.trim()] = row[k];
-      });
-
-      const parseDate = (value) => {
-        if (!value) return "";
-        if (typeof value === "number") return new Date((value - 25569) * 86400 * 1000).toLocaleDateString("en-GB");
-        return value.toString();
-      };
-
-      const newRow = {
-        name: cleanRow["الاسم"]?.toString().trim() || "",
-        phone: cleanRow["رقم التلفون"]?.toString().trim() || "",
-        phone1: cleanRow["رقم التلفون 1"]?.toString().trim() || "",
-        phone2: cleanRow["رقم التلفون 2"]?.toString().trim() || "",
-        notes: cleanRow["ملاحظات"]?.toString().trim() || "",
-        address: cleanRow["العنوان"]?.toString().trim() || "",
-        dateOfBirth: parseDate(cleanRow["تاريخ الميلاد"]),
-        stage: cleanRow["المرحلة"] || "",
-        birthCertificate: cleanRow["شهادة الميلاد"]?.toString().trim() || "",
-        visited: {},
-        page: stage
-      };
-
-      if (!newRow.name) continue;
-      const lowerName = newRow.name.toLowerCase();
-      if (existingNames.has(lowerName)) continue; // تجاهل الاسم المكرر
-      existingNames.add(lowerName);
-
-      newRows.push(newRow);
-    }
-
-    try {
-      for (const child of newRows) {
-        const docRef = await addDoc(childrenCollection, child);
-        setRows(prev => [...prev, { id: docRef.id, ...child }]);
-        cachedRows.current = [...cachedRows.current || [], { id: docRef.id, ...child }];
+      for (const row of json) {
+        const cleanRow = {};
+        Object.keys(row).forEach(k => { cleanRow[k.trim()] = row[k]; });
+        const parseDate = (value) => {
+          if (!value) return "";
+          if (typeof value === "number") return new Date((value - 25569) * 86400 * 1000).toLocaleDateString("en-GB");
+          return value.toString();
+        };
+        const newRow = {
+          name: cleanRow["الاسم"]?.toString().trim() || "",
+          phone: cleanRow["رقم التلفون"]?.toString().trim() || "",
+          phone1: cleanRow["رقم التلفون 1"]?.toString().trim() || "",
+          phone2: cleanRow["رقم التلفون 2"]?.toString().trim() || "",
+          notes: cleanRow["ملاحظات"]?.toString().trim() || "",
+          address: cleanRow["العنوان"]?.toString().trim() || "",
+          dateOfBirth: parseDate(cleanRow["تاريخ الميلاد"]),
+          stage: cleanRow["المرحلة"] || "",
+          birthCertificate: cleanRow["شهادة الميلاد"]?.toString().trim() || "",
+          visited: {},
+          page: stage
+        };
+        if (!newRow.name) continue;
+        const lowerName = newRow.name.toLowerCase();
+        if (existingNames.has(lowerName)) continue;
+        existingNames.add(lowerName);
+        newRows.push(newRow);
       }
-      alert(`تم إضافة ${newRows.length} صفوف جديدة بنجاح ✅`);
-    } catch (error) {
-      console.error("خطأ في رفع Excel:", error);
-      alert("❌ حدث خطأ أثناء رفع الإكسل");
-    }
+
+      try {
+        for (const child of newRows) {
+          const docRef = await addDoc(childrenCollection, child);
+          setRows(prev => [...prev, { id: docRef.id, ...child }]);
+          cachedRows.current = [...cachedRows.current || [], { id: docRef.id, ...child }];
+        }
+        alert(`تم إضافة ${newRows.length} صفوف جديدة بنجاح ✅`);
+      } catch (error) {
+        console.error("خطأ في رفع Excel:", error);
+        alert("❌ حدث خطأ أثناء رفع الإكسل");
+      }
+    };
+    reader.readAsArrayBuffer(file);
   };
 
-  reader.readAsArrayBuffer(file);
-};
- // نهاية handleUpload
-
-
-
   // ================= EXPORT EXCEL =================
-const exportChildrenToExcel = () => {
-  if (!rows.length) {
-    return alert("⚠️ لا توجد بيانات للتصدير");
-  }
+  const exportChildrenToExcel = () => {
+    if (!rows.length) return alert("⚠️ لا توجد بيانات للتصدير");
+    const data = rows.map((child, index) => ({
+      "#": index + 1,
+      "الاسم": child.name || "",
+      "رقم الهاتف": child.phone || "",
+      "رقم هاتف 1": child.phone1 || "",
+      "رقم هاتف 2": child.phone2 || "",
+      "العنوان": child.address || "",
+      "تاريخ الميلاد": child.dateOfBirth || "",
+      "المرحلة": child.stage || "",
+      "ملاحظات": child.notes || ""
+    }));
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Children");
+    XLSX.writeFile(workbook, `children_${stage}_${new Date().toISOString().slice(0,10)}.xlsx`);
+  };
 
-  const data = rows.map((child, index) => ({
-    "#": index + 1,
-    "الاسم": child.name || "",
-    "رقم الهاتف": child.phone || "",
-    "رقم هاتف 1": child.phone1 || "",
-    "رقم هاتف 2": child.phone2 || "",
-    "العنوان": child.address || "",
-    "تاريخ الميلاد": child.dateOfBirth || "",
-    "المرحلة": child.stage || "",
-    "ملاحظات": child.notes || ""
-  }));
-// ================= MONTHLY VISITS COUNT =================
-const monthlyVisits = useMemo(() => {
-  const counts = {};
-
-  rows.forEach(child => {
-    const visited = child.visited || {};
-
-    let count = 0;
-
-    Object.keys(visited).forEach(date => {
-      if (date.startsWith(selectedMonth) && visited[date]) {
-        count++;
-      }
-    });
-
-    counts[child.id] = count;
-  });
-
-  return counts;
-}, [rows, selectedMonth]);
-
-// ================= FILTER =================
-const filteredRows = useMemo(() => {
-  return rows
-    .filter(r => r.name.toLowerCase().includes(search.toLowerCase()))
-    .sort((a, b) => a.name.localeCompare(b.name, "ar"));
-}, [rows, search]);
-
-
-  const worksheet = XLSX.utils.json_to_sheet(data);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Children");
-
-  XLSX.writeFile(
-    workbook,
-    `children_${stage}_${new Date().toISOString().slice(0, 10)}.xlsx`
-  );
-};
-
-    return rows
-      .filter(r => r.name.toLowerCase().includes(search.toLowerCase()))
-      .sort((a, b) => a.name.localeCompare(b.name, "ar"));
+  // ================= FILTER =================
+  const filteredRows = useMemo(() => {
+    return rows.filter(r => r.name.toLowerCase().includes(search.toLowerCase()))
+      .sort((a,b) => a.name.localeCompare(b.name, "ar"));
   }, [rows, search]);
 
   const indexOfLastRow = currentPage * rowsPerPage;
@@ -324,6 +213,14 @@ const filteredRows = useMemo(() => {
   const currentRows = filteredRows.slice(indexOfFirstRow, indexOfLastRow);
   const totalPages = Math.ceil(filteredRows.length / rowsPerPage);
 
+// ================= COUNT VISITS PER MONTH =================
+const getVisitsThisMonth = (visited) => {
+  if (!visited) return 0;
+  const [y, m] = selectedDay.split("-"); // استخدم اليوم المختار بدل التاريخ الحالي
+  return Object.keys(visited).filter(day => day.startsWith(`${y}-${m}`) && visited[day]).length;
+};
+
+  // ================= RETURN JSX =================
   return (
     <div className="min-h-screen p-6">
       <div className="bg-white/90 p-6 rounded-2xl shadow-xl">
@@ -333,87 +230,19 @@ const filteredRows = useMemo(() => {
 
         {/* ===== أزرار التحكم ===== */}
         <div className="flex flex-wrap gap-2 mb-4">
-
-          <input
-            type="text"
-            placeholder="🔍 ابحث عن اسم الطفل..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="p-2 border rounded-xl flex-1 min-w-[180px]"
-          />
-
+          <input type="text" placeholder="🔍 ابحث عن اسم الطفل..." value={search} onChange={e=>setSearch(e.target.value)} className="p-2 border rounded-xl flex-1 min-w-[180px]"/>
+          <input type="date" value={selectedDay} onChange={e=>setSelectedDay(e.target.value)} className="p-2 border rounded-xl"/>
           <div className="flex gap-2">
-            <input
-              type="text"
-              placeholder="✍️ اكتب اسم الطفل"
-              value={newName}
-              onChange={e => setNewName(e.target.value)}
-              className="p-2 border rounded-xl w-48"
-            />
-            <button
-              onClick={addRow}
-              className="px-4 py-2 bg-green-500 text-white rounded-xl"
-            >
-              ➕ إضافة الاسم
-            </button>
+            <input type="text" placeholder="✍️ اكتب اسم الطفل" value={newName} onChange={e=>setNewName(e.target.value)} className="p-2 border rounded-xl w-48"/>
+            <button onClick={addRow} className="px-4 py-2 bg-green-500 text-white rounded-xl">➕ إضافة الاسم</button>
           </div>
-
           <label className="px-4 py-2 bg-blue-500 text-white rounded-xl cursor-pointer">
-            ⬆️ Upload Excel
-            <input type="file" hidden onChange={handleUpload} />
+            ⬆️ Upload Excel<input type="file" hidden onChange={handleUpload}/>
           </label>
-
-          <button
-            onClick={exportChildrenToExcel}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-xl"
-          >
-            ⬇️ Export Excel
-          </button>
-
-          <button
-            onClick={handleReset}
-            className="px-4 py-2 bg-yellow-500 text-white rounded-xl"
-          >
-            🔄 إعادة ضبط الزيارات
-          </button>
-
-          {/* ===== زر النقل المقفول 🔒 ===== */}
-          <button
-            onClick={() => setShowSelection(true)}
-            className="px-4 py-2 bg-purple-500 text-white rounded-xl"
-          >
-            اختيار الأطفال للنقل
-          </button>
-
+          <button onClick={exportChildrenToExcel} className="px-4 py-2 bg-indigo-600 text-white rounded-xl">⬇️ Export Excel</button>
+          <button onClick={handleReset} className="px-4 py-2 bg-yellow-500 text-white rounded-xl">🔄 إعادة ضبط الزيارات</button>
+          <button onClick={()=>setShowSelection(true)} className="px-4 py-2 bg-purple-500 text-white rounded-xl">اختيار الأطفال للنقل</button>
         </div>
-
-        {/* ===== لوحة النقل المقفول 🔒 ===== */}
-        {showSelection && (
-          <div className="mt-4 p-4 border rounded-xl bg-gray-50 flex gap-2 items-center flex-wrap">
-            <span>نقل الأطفال المحددين إلى:</span>
-
-            <select
-              disabled
-              className="p-2 border rounded bg-gray-200 text-gray-500 cursor-not-allowed"
-            >
-              <option value="">اختر الصف 🔒</option>
-            </select>
-
-            <button
-              disabled
-              className="px-4 py-2 bg-gray-400 text-white rounded flex items-center gap-1 cursor-not-allowed opacity-70"
-            >
-              🔒 مقفول
-            </button>
-
-            <button
-              onClick={() => setShowSelection(false)}
-              className="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500"
-            >
-              إلغاء
-            </button>
-          </div>
-        )}
 
         {/* ===== الجدول ===== */}
         <table className="w-full border rounded-xl text-center table-fixed">
@@ -423,77 +252,36 @@ const filteredRows = useMemo(() => {
               <th className="p-3">#</th>
               <th className="p-3">الاسم</th>
               <th className="p-3">تمت الزيارة ✅</th>
-              <th className="p-3">زيارات الشهر 🔢</th>
+              <th className="p-3">عدد مرات الزيارات هذا الشهر</th>
               <th className="p-3">معلومات الطفل</th>
               <th className="p-3">حذف الطفل ❌</th>
             </tr>
           </thead>
           <tbody>
-            {currentRows.map((row, index) => (
+            {currentRows.map((row,index)=>(
               <React.Fragment key={row.id}>
                 <tr className="even:bg-gray-100">
-                  {showSelection && (
-                    <td className="p-3">
-                      <input
-                        type="checkbox"
-checked={row.visited?.[today] || false}
-onChange={e =>
-  handleChange(
-    row.id,
-    "visited",
-    { ...row.visited, [today]: e.target.checked }
-  )
-}
-
-                        className="w-5 h-5"
-                      />
-                    </td>
-                  )}
-
-                  <td className="p-3">{indexOfFirstRow + index + 1}</td>
+                  {showSelection && <td className="p-3"><input type="checkbox" checked={!!selectedRows[row.id]} onChange={e=>setSelectedRows(prev=>({...prev,[row.id]:e.target.checked}))} className="w-5 h-5"/></td>}
+                  <td className="p-3">{indexOfFirstRow+index+1}</td>
                   <td className="p-3 font-semibold">{row.name}</td>
-                  <td className="p-3">
-                    <input
-                      type="checkbox"
-                      checked={row.visited?.[selectedMonth] || false}
-                      onChange={e => handleChange(row.id, "visited", { ...row.visited, [selectedMonth]: e.target.checked })}
-                      className="w-6 h-6"
-                    />
-                  </td>
-<td className="p-3 font-bold text-blue-700">
-  {monthlyVisits[row.id] || 0}
-</td>
-                  <td className="p-3">
-                    <button
-                      onClick={() => setExpandedRow(expandedRow === row.id ? null : row.id)}
-                      className="px-4 py-1 bg-red-800 text-white rounded"
-                    >
-                      معلومات الطفل
-                    </button>
-                  </td>
-                  <td className="p-3">
-                    <button
-                      onClick={() => handleDelete(row.id)}
-                      className="px-3 py-1 bg-red-500 text-white rounded"
-                    >
-                      ❌ حذف
-                    </button>
-                  </td>
+                  <td className="p-3"><input type="checkbox" checked={row.visited?.[selectedDay]||false} onChange={e=>handleChange(row.id,"visited",{...row.visited,[selectedDay]:e.target.checked})} className="w-6 h-6"/></td>
+                  <td className="p-3 font-bold text-purple-700">{getVisitsThisMonth(row.visited)}</td>
+                  <td className="p-3"><button onClick={()=>setExpandedRow(expandedRow===row.id?null:row.id)} className="px-4 py-1 bg-red-800 text-white rounded">معلومات الطفل</button></td>
+                  <td className="p-3"><button onClick={()=>handleDelete(row.id)} className="px-3 py-1 bg-red-500 text-white rounded">❌ حذف</button></td>
                 </tr>
-
-                {expandedRow === row.id && (
+                {expandedRow===row.id && (
                   <tr>
-                    <td colSpan={showSelection ? 6 : 5} className="bg-gray-100 p-0">
+                    <td colSpan={showSelection?7:6} className="bg-gray-100 p-0">
                       <div className="w-full p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <input value={row.name} onChange={e => handleChange(row.id, "name", e.target.value)} placeholder="اسم الطفل" className="p-2 border rounded font-semibold" />
-                        <input value={row.phone || ""} onChange={e => handleChange(row.id, "phone", e.target.value)} placeholder="رقم الهاتف" className="p-2 border rounded" />
-                        <input value={row.phone1 || ""} onChange={e => handleChange(row.id, "phone1", e.target.value)} placeholder="رقم هاتف إضافي 1" className="p-2 border rounded" />
-                        <input value={row.phone2 || ""} onChange={e => handleChange(row.id, "phone2", e.target.value)} placeholder="رقم هاتف إضافي 2" className="p-2 border rounded" />
-                        <input value={row.notes || ""} onChange={e => handleChange(row.id, "notes", e.target.value)} placeholder="ملاحظات" className="p-2 border rounded" />
-                        <input value={row.address || ""} onChange={e => handleChange(row.id, "address", e.target.value)} placeholder="العنوان" className="p-2 border rounded" />
-                        <input value={row.dateOfBirth || ""} onChange={e => handleChange(row.id, "dateOfBirth", e.target.value)} placeholder="تاريخ الميلاد" className="p-2 border rounded" />
-                        <input value={row.stage || ""} onChange={e => handleChange(row.id, "stage", e.target.value)} placeholder="المرحلة" className="p-2 border rounded" />
-                        <input value={row.birthCertificate || ""} onChange={e => handleChange(row.id, "birthCertificate", e.target.value)} placeholder="شهادة الميلاد" className="p-2 border rounded" />
+                        <input value={row.name} onChange={e=>handleChange(row.id,"name",e.target.value)} placeholder="اسم الطفل" className="p-2 border rounded font-semibold"/>
+                        <input value={row.phone||""} onChange={e=>handleChange(row.id,"phone",e.target.value)} placeholder="رقم الهاتف" className="p-2 border rounded"/>
+                        <input value={row.phone1||""} onChange={e=>handleChange(row.id,"phone1",e.target.value)} placeholder="رقم هاتف إضافي 1" className="p-2 border rounded"/>
+                        <input value={row.phone2||""} onChange={e=>handleChange(row.id,"phone2",e.target.value)} placeholder="رقم هاتف إضافي 2" className="p-2 border rounded"/>
+                        <input value={row.notes||""} onChange={e=>handleChange(row.id,"notes",e.target.value)} placeholder="ملاحظات" className="p-2 border rounded"/>
+                        <input value={row.address||""} onChange={e=>handleChange(row.id,"address",e.target.value)} placeholder="العنوان" className="p-2 border rounded"/>
+                        <input value={row.dateOfBirth||""} onChange={e=>handleChange(row.id,"dateOfBirth",e.target.value)} placeholder="تاريخ الميلاد" className="p-2 border rounded"/>
+                        <input value={row.stage||""} onChange={e=>handleChange(row.id,"stage",e.target.value)} placeholder="المرحلة" className="p-2 border rounded"/>
+                        <input value={row.birthCertificate||""} onChange={e=>handleChange(row.id,"birthCertificate",e.target.value)} placeholder="شهادة الميلاد" className="p-2 border rounded"/>
                       </div>
                     </td>
                   </tr>
@@ -504,14 +292,13 @@ onChange={e =>
         </table>
 
         {/* Pagination */}
-        {totalPages > 1 && (
+        {totalPages>1 && (
           <div className="flex justify-center gap-2 mt-4">
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-              <button key={p} onClick={() => setCurrentPage(p)} className={`px-3 py-1 rounded border ${currentPage === p ? "bg-red-800 text-white" : ""}`}>{p}</button>
+            {Array.from({length: totalPages},(_,i)=>i+1).map(p=>(
+              <button key={p} onClick={()=>setCurrentPage(p)} className={`px-3 py-1 rounded border ${currentPage===p?"bg-red-800 text-white":""}`}>{p}</button>
             ))}
           </div>
         )}
-
       </div>
     </div>
   );
