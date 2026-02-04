@@ -250,97 +250,73 @@ const handleMoveSelected = async () => {
           حضور مدارس الأحد – {stageLabel}
         </h1>
 
-        {/* أدوات */}
-        <div className="flex flex-wrap gap-2 mb-4 items-center justify-between">
-          <input
-            value={search}
-            onChange={e => {
-              setSearch(e.target.value);
-              setCurrentPage(1);
-            }}
-            placeholder="🔍 ابحث عن اسم الطفل..."
-            className="p-2 border rounded-xl flex-1"
-          />
+{/* ===== أدوات التحكم ===== */}
+<div className="flex flex-wrap gap-2 mb-4 items-center">
 
-{/* زر فلتر صغير */}
-<div className="relative">
-  <button
-    onClick={() => setOpenFilter(!openFilter)}
-    className="px-3 py-2 border rounded-xl bg-white shadow hover:bg-gray-100 text-sm"
+  {/* البحث */}
+  <input
+    value={search}
+    onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+    placeholder="🔍 ابحث عن اسم الطفل..."
+    className="p-2 border rounded-xl flex-1 min-w-[180px]"
+  />
+
+  {/* فلتر الحضور */}
+  <select
+    value={filterStatus}
+    onChange={e => { setFilterStatus(e.target.value); setCurrentPage(1); }}
+    className="p-2 border rounded-xl"
   >
-    🔽 فلتر
+    <option value="all">الكل</option>
+    <option value="present">الحاضرين</option>
+    <option value="none">الغياب</option>
+  </select>
+
+  {/* اختيار اليوم */}
+  <input
+    type="date"
+    value={selectedDate}
+    onChange={e => setSelectedDate(e.target.value)}
+    className="p-2 border rounded-xl"
+  />
+
+  {/* إضافة اسم جديد */}
+  <input
+    value={newChildName}
+    onChange={e => setNewChildName(e.target.value)}
+    placeholder="إضافة اسم طفل..."
+    className="p-2 border rounded-xl"
+  />
+  <button
+    onClick={addChild}
+    className="px-4 py-2 bg-green-500 text-white rounded-xl"
+  >
+    ➕ إضافة
   </button>
 
-  {openFilter && (
-    <div className="absolute right-0 mt-2 bg-white border rounded-xl shadow-lg z-50 w-40">
-      {[
-        { label: "الكل", value: "all" },
-        { label: "الحاضرين", value: "present" },
-        { label: "الغايبين", value: "none" },
-      ].map(item => (
-        <button
-          key={item.value}
-          onClick={() => {
-            setFilterStatus(item.value);
-            setOpenFilter(false);
-            setCurrentPage(1);
-          }}
-          className={`w-full text-right px-3 py-2 hover:bg-gray-100 ${
-            filterStatus === item.value ? "bg-gray-200 font-bold" : ""
-          }`}
-        >
-          {item.label}
-        </button>
-      ))}
-    </div>
-  )}
+  {/* رفع إكسل */}
+  <label className="px-4 py-2 bg-blue-500 text-white rounded-xl cursor-pointer">
+    ⬆️ Upload Excel
+    <input type="file" hidden onChange={handleUpload}/>
+  </label>
+
+  {/* إعادة ضبط الحضور */}
+  <button
+    onClick={resetAttendance}
+    className="px-4 py-2 bg-yellow-500 text-white rounded-xl"
+  >
+    🔄 إعادة ضبط
+  </button>
+
+  {/* اختيار للنقل */}
+  <button
+    onClick={() => setShowSelection(true)}
+    className="px-4 py-2 bg-purple-500 text-white rounded-xl"
+  >
+    اختيار للنقل
+  </button>
 </div>
 
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={e => setSelectedDate(e.target.value)}
-            className="p-2 border rounded-xl"
-          />
-
-          <input
-            value={newChildName}
-            onChange={e => setNewChildName(e.target.value)}
-            placeholder="إضافة اسم طفل..."
-            className="p-2 border rounded-xl"
-          />
-
-          <button
-            onClick={addChild}
-            className="px-4 py-2 bg-green-500 text-white rounded-xl"
-          >
-            ➕ إضافة
-          </button>
-
-          <label className="px-4 py-2 bg-blue-500 text-white rounded-xl cursor-pointer">
-            ⬆️ Upload Excel
-            <input
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={handleUpload}
-              className="hidden"
-            />
-          </label>
-
-          <button
-            onClick={resetAttendance}
-            className="px-4 py-2 bg-yellow-500 text-white rounded-xl"
-          >
-            🔄 إعادة ضبط
-          </button>
-
-          <button
-            onClick={() => setShowSelection(true)}
-            className="px-4 py-2 bg-purple-500 text-white rounded-xl"
-          >
-            اختيار للنقل
-          </button>
-        </div>
 
         {/* زر النقل المقفول */}
 {showSelection && (

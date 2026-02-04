@@ -253,39 +253,17 @@ const filteredChildren = useMemo(() => {
     onChange={(e) => setSearch(e.target.value)}
     className="p-2 border rounded-xl flex-1 min-w-[180px]"
   />
-{/* زر فلتر */}
-<div className="relative">
-  <button
-    onClick={() => setOpenFilter(!openFilter)}
-    className="px-3 py-2 border rounded-xl bg-white shadow hover:bg-gray-100 text-sm"
-  >
-    🔽 فلتر
-  </button>
 
-  {openFilter && (
-    <div className="absolute right-0 mt-2 bg-white border rounded-xl shadow-lg z-50 w-40">
-      {[
-        { label: "الكل", value: "all" },
-        { label: "الحاضرين", value: "present" },
-        { label: "الغايبين", value: "none" },
-      ].map(item => (
-        <button
-          key={item.value}
-          onClick={() => {
-            setFilterStatus(item.value);
-            setOpenFilter(false);
-            setCurrentPage(1);
-          }}
-          className={`w-full text-right px-3 py-2 hover:bg-gray-100 ${
-            filterStatus === item.value ? "bg-gray-200 font-bold" : ""
-          }`}
-        >
-          {item.label}
-        </button>
-      ))}
-    </div>
-  )}
-</div>
+  {/* فلتر الحضور */}
+  <select
+    value={filterStatus}
+    onChange={e => { setFilterStatus(e.target.value); setCurrentPage(1); }}
+    className="p-2 border rounded-xl"
+  >
+    <option value="all">الكل</option>
+    <option value="present">الحاضرين</option>
+    <option value="none">الغياب</option>
+  </select>
 
 
   {/* التاريخ */}
