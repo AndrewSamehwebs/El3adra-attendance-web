@@ -254,8 +254,8 @@ export default function ChildrenPage() {
             className="p-2 border rounded-xl"
           >
             <option value="all">الكل</option>
-            <option value="present">الحاضرون</option>
-            <option value="absent">الغياب</option>
+            <option value="present">الذين تم زيارتهم</option>
+            <option value="absent">الذين لم يتم زيارتهم</option>
           </select>
           <input
             type="date"
