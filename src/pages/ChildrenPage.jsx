@@ -1,16 +1,7 @@
 // src/pages/ChildrenPage.jsx
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { db } from "../firebase/firebaseConfig";
-import {
-  collection,
-  getDocs,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  doc,
-  query,
-  where
-} from "firebase/firestore";
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where } from "firebase/firestore";
 import { debounce } from "lodash";
 import * as XLSX from "xlsx";
 import { useParams } from "react-router-dom";
@@ -34,6 +25,7 @@ export default function ChildrenPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const todayKey = new Date().toISOString().slice(0, 10);
   const [selectedDay, setSelectedDay] = useState(todayKey);
+  const [attendanceFilter, setAttendanceFilter] = useState("all");
   const [showSelection, setShowSelection] = useState(false);
   const [selectedRows, setSelectedRows] = useState({});
   const rowsPerPage = 10;
@@ -52,7 +44,8 @@ export default function ChildrenPage() {
       const data = snapshot.docs.map(d => ({
         id: d.id,
         ...d.data(),
-        name: d.data().name?.trim() || ""
+        name: d.data().name?.trim() || "",
+        visited: d.data().visited || {}
       }));
       setRows(data);
       cachedRows.current = data;
@@ -126,85 +119,73 @@ export default function ChildrenPage() {
     cachedRows.current = updated;
   };
 
-// ================= EXCEL UPLOAD =================
-const handleUpload = async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
+  // ================= UPLOAD EXCEL =================
+  const handleUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const data = new Uint8Array(evt.target.result);
+        const workbook = XLSX.read(data, { type: "array" });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+        if (!json.length) return alert("❌ الملف فارغ أو غير صالح");
 
-  const reader = new FileReader();
-  reader.onload = async (evt) => {
-    try {
-      const data = new Uint8Array(evt.target.result);
-      const workbook = XLSX.read(data, { type: "array" });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+        const existingNames = new Set(rows.map(r => r.name.trim().toLowerCase()));
+        const newRows = [];
 
-      if (!json.length) {
-        alert("❌ الملف فارغ أو غير صالح");
-        return;
-      }
+        for (const row of json) {
+          const cleanRow = {};
+          Object.keys(row).forEach(k => { cleanRow[k.trim()] = row[k]; });
+          if (!cleanRow["الاسم"] || typeof cleanRow["الاسم"] !== "string") {
+            alert("❌ الملف غير صالح (العمود 'الاسم' مفقود أو غير صحيح)");
+            return;
+          }
 
-      const existingNames = new Set(rows.map(r => r.name.trim().toLowerCase()));
-      const newRows = [];
+          const parseDate = (value) => {
+            if (!value) return "";
+            if (typeof value === "number") return new Date((value - 25569) * 86400 * 1000).toLocaleDateString("en-GB");
+            return value.toString();
+          };
 
-      for (const row of json) {
-        const cleanRow = {};
-        Object.keys(row).forEach(k => { cleanRow[k.trim()] = row[k]; });
+          const newRow = {
+            name: cleanRow["الاسم"].toString().trim(),
+            phone: cleanRow["رقم التلفون"]?.toString().trim() || "",
+            phone1: cleanRow["رقم التلفون 1"]?.toString().trim() || "",
+            phone2: cleanRow["رقم التلفون 2"]?.toString().trim() || "",
+            notes: cleanRow["ملاحظات"]?.toString().trim() || "",
+            address: cleanRow["العنوان"]?.toString().trim() || "",
+            dateOfBirth: parseDate(cleanRow["تاريخ الميلاد"]),
+            stage: cleanRow["المرحلة"] || "",
+            birthCertificate: cleanRow["شهادة الميلاد"]?.toString().trim() || "",
+            school: cleanRow["المدرسة"]?.toString().trim() || "",
+            visited: {},
+            page: stage
+          };
 
-        // ===== التحقق الأساسي =====
-        if (!cleanRow["الاسم"] || typeof cleanRow["الاسم"] !== "string") {
-          alert("❌ هذا الملف ليس ملائم للموقع (العمود 'الاسم' مفقود أو غير صحيح)");
-          return;
+          const lowerName = newRow.name.toLowerCase();
+          if (existingNames.has(lowerName)) continue;
+          existingNames.add(lowerName);
+          newRows.push(newRow);
         }
 
-        const parseDate = (value) => {
-          if (!value) return "";
-          if (typeof value === "number") return new Date((value - 25569) * 86400 * 1000).toLocaleDateString("en-GB");
-          return value.toString();
-        };
+        if (!newRows.length) return alert("⚠️ لا توجد صفوف جديدة للإضافة");
 
-        const newRow = {
-          name: cleanRow["الاسم"].toString().trim(),
-          phone: cleanRow["رقم التلفون"]?.toString().trim() || "",
-          phone1: cleanRow["رقم التلفون 1"]?.toString().trim() || "",
-          phone2: cleanRow["رقم التلفون 2"]?.toString().trim() || "",
-          notes: cleanRow["ملاحظات"]?.toString().trim() || "",
-          address: cleanRow["العنوان"]?.toString().trim() || "",
-          dateOfBirth: parseDate(cleanRow["تاريخ الميلاد"]),
-          stage: cleanRow["المرحلة"] || "",
-          birthCertificate: cleanRow["شهادة الميلاد"]?.toString().trim() || "",
-          school: cleanRow["المدرسة"]?.toString().trim() || "",
-          visited: {},
-          page: stage
-        };
+        for (const child of newRows) {
+          const docRef = await addDoc(childrenCollection, child);
+          setRows(prev => [...prev, { id: docRef.id, ...child }]);
+          cachedRows.current = [...cachedRows.current || [], { id: docRef.id, ...child }];
+        }
 
-        const lowerName = newRow.name.toLowerCase();
-        if (existingNames.has(lowerName)) continue; // منع التكرار
-        existingNames.add(lowerName);
-        newRows.push(newRow);
+        alert(`✅ تم إضافة ${newRows.length} صفوف جديدة بنجاح`);
+      } catch (error) {
+        console.error("خطأ في رفع Excel:", error);
+        alert("❌ حدث خطأ أثناء رفع الإكسل، الملف غير صالح");
       }
-
-      if (!newRows.length) {
-        alert("⚠️ لا توجد صفوف جديدة للإضافة");
-        return;
-      }
-
-      // ===== إضافة الصفوف الجديدة =====
-      for (const child of newRows) {
-        const docRef = await addDoc(childrenCollection, child);
-        setRows(prev => [...prev, { id: docRef.id, ...child }]);
-        cachedRows.current = [...cachedRows.current || [], { id: docRef.id, ...child }];
-      }
-
-      alert(`✅ تم إضافة ${newRows.length} صفوف جديدة بنجاح`);
-    } catch (error) {
-      console.error("خطأ في رفع Excel:", error);
-      alert("❌ حدث خطأ أثناء رفع الإكسل، الملف غير صالح");
-    }
+    };
+    reader.readAsArrayBuffer(file);
   };
-  reader.readAsArrayBuffer(file);
-};
-
 
   // ================= EXPORT EXCEL =================
   const exportChildrenToExcel = () => {
@@ -227,23 +208,28 @@ const handleUpload = async (e) => {
     XLSX.writeFile(workbook, `children_${stage}_${new Date().toISOString().slice(0,10)}.xlsx`);
   };
 
-  // ================= FILTER =================
+  // ================= FILTERED ROWS =================
   const filteredRows = useMemo(() => {
-    return rows.filter(r => r.name.toLowerCase().includes(search.toLowerCase()))
+    return rows
+      .filter(r => r.name.toLowerCase().includes(search.toLowerCase()))
+      .filter(r => {
+        if (attendanceFilter === "present") return r.visited?.[selectedDay];
+        if (attendanceFilter === "absent") return !r.visited?.[selectedDay];
+        return true;
+      })
       .sort((a,b) => a.name.localeCompare(b.name, "ar"));
-  }, [rows, search]);
+  }, [rows, search, attendanceFilter, selectedDay]);
 
   const indexOfLastRow = currentPage * rowsPerPage;
   const indexOfFirstRow = indexOfLastRow - rowsPerPage;
   const currentRows = filteredRows.slice(indexOfFirstRow, indexOfLastRow);
   const totalPages = Math.ceil(filteredRows.length / rowsPerPage);
 
-// ================= COUNT VISITS PER MONTH =================
-const getVisitsThisMonth = (visited) => {
-  if (!visited) return 0;
-  const [y, m] = selectedDay.split("-"); // استخدم اليوم المختار بدل التاريخ الحالي
-  return Object.keys(visited).filter(day => day.startsWith(`${y}-${m}`) && visited[day]).length;
-};
+  const getVisitsThisMonth = (visited) => {
+    if (!visited) return 0;
+    const [y, m] = selectedDay.split("-");
+    return Object.keys(visited).filter(day => day.startsWith(`${y}-${m}`) && visited[day]).length;
+  };
 
   // ================= RETURN JSX =================
   return (
@@ -254,19 +240,68 @@ const getVisitsThisMonth = (visited) => {
         </h1>
 
         {/* ===== أزرار التحكم ===== */}
-        <div className="flex flex-wrap gap-2 mb-4">
-          <input type="text" placeholder="🔍 ابحث عن اسم الطفل..." value={search} onChange={e=>setSearch(e.target.value)} className="p-2 border rounded-xl flex-1 min-w-[180px]"/>
-          <input type="date" value={selectedDay} onChange={e=>setSelectedDay(e.target.value)} className="p-2 border rounded-xl"/>
+        <div className="flex flex-wrap gap-2 mb-4 items-center">
+          <input
+            type="text"
+            placeholder="🔍 ابحث عن اسم الطفل..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="p-2 border rounded-xl flex-1 min-w-[180px]"
+          />
+          <select
+            value={attendanceFilter}
+            onChange={e => setAttendanceFilter(e.target.value)}
+            className="p-2 border rounded-xl"
+          >
+            <option value="all">الكل</option>
+            <option value="present">الحاضرون</option>
+            <option value="absent">الغياب</option>
+          </select>
+          <input
+            type="date"
+            value={selectedDay}
+            onChange={e => setSelectedDay(e.target.value)}
+            className="p-2 border rounded-xl"
+          />
+
           <div className="flex gap-2">
-            <input type="text" placeholder="✍️ اكتب اسم الطفل" value={newName} onChange={e=>setNewName(e.target.value)} className="p-2 border rounded-xl w-48"/>
-            <button onClick={addRow} className="px-4 py-2 bg-green-500 text-white rounded-xl">➕ إضافة الاسم</button>
+            <input
+              type="text"
+              placeholder="✍️ اكتب اسم الطفل"
+              value={newName}
+              onChange={e => setNewName(e.target.value)}
+              className="p-2 border rounded-xl w-48"
+            />
+            <button onClick={addRow} className="px-4 py-2 bg-green-500 text-white rounded-xl">
+              ➕ إضافة الاسم
+            </button>
           </div>
+
           <label className="px-4 py-2 bg-blue-500 text-white rounded-xl cursor-pointer">
-            ⬆️ Upload Excel<input type="file" hidden onChange={handleUpload}/>
+            ⬆️ Upload Excel
+            <input type="file" hidden onChange={handleUpload}/>
           </label>
-          <button onClick={exportChildrenToExcel} className="px-4 py-2 bg-indigo-600 text-white rounded-xl">⬇️ Export Excel</button>
-          <button onClick={handleReset} className="px-4 py-2 bg-yellow-500 text-white rounded-xl">🔄 إعادة ضبط الزيارات</button>
-          <button onClick={()=>setShowSelection(true)} className="px-4 py-2 bg-purple-500 text-white rounded-xl">اختيار الأطفال للنقل</button>
+
+          <button
+            onClick={exportChildrenToExcel}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-xl"
+          >
+            ⬇️ Export Excel
+          </button>
+
+          <button
+            onClick={handleReset}
+            className="px-4 py-2 bg-yellow-500 text-white rounded-xl"
+          >
+            🔄 إعادة ضبط الزيارات
+          </button>
+
+          <button
+            onClick={() => setShowSelection(true)}
+            className="px-4 py-2 bg-purple-500 text-white rounded-xl"
+          >
+            اختيار الأطفال للنقل
+          </button>
         </div>
 
         {/* ===== الجدول ===== */}
@@ -282,6 +317,7 @@ const getVisitsThisMonth = (visited) => {
               <th className="p-3">حذف الطفل ❌</th>
             </tr>
           </thead>
+
           <tbody>
             {currentRows.map((row,index)=>(
               <React.Fragment key={row.id}>
@@ -289,11 +325,20 @@ const getVisitsThisMonth = (visited) => {
                   {showSelection && <td className="p-3"><input type="checkbox" checked={!!selectedRows[row.id]} onChange={e=>setSelectedRows(prev=>({...prev,[row.id]:e.target.checked}))} className="w-5 h-5"/></td>}
                   <td className="p-3">{indexOfFirstRow+index+1}</td>
                   <td className="p-3 font-semibold">{row.name}</td>
-                  <td className="p-3"><input type="checkbox" checked={row.visited?.[selectedDay]||false} onChange={e=>handleChange(row.id,"visited",{...row.visited,[selectedDay]:e.target.checked})} className="w-6 h-6"/></td>
+                  <td className="p-3">
+                    <input type="checkbox" checked={row.visited?.[selectedDay]||false} onChange={e=>handleChange(row.id,"visited",{...row.visited,[selectedDay]:e.target.checked})} className="w-6 h-6"/>
+                  </td>
                   <td className="p-3 font-bold text-purple-700">{getVisitsThisMonth(row.visited)}</td>
-                  <td className="p-3"><button onClick={()=>setExpandedRow(expandedRow===row.id?null:row.id)} className="px-4 py-1 bg-red-800 text-white rounded">معلومات الطفل</button></td>
-                  <td className="p-3"><button onClick={()=>handleDelete(row.id)} className="px-3 py-1 bg-red-500 text-white rounded">❌ حذف</button></td>
+                  <td className="p-3">
+                    <button onClick={()=>setExpandedRow(expandedRow===row.id?null:row.id)} className="px-4 py-1 bg-red-800 text-white rounded">
+                      معلومات الطفل
+                    </button>
+                  </td>
+                  <td className="p-3">
+                    <button onClick={()=>handleDelete(row.id)} className="px-3 py-1 bg-red-500 text-white rounded">❌ حذف</button>
+                  </td>
                 </tr>
+
                 {expandedRow===row.id && (
                   <tr>
                     <td colSpan={showSelection?7:6} className="bg-gray-100 p-0">
@@ -307,12 +352,7 @@ const getVisitsThisMonth = (visited) => {
                         <input value={row.dateOfBirth||""} onChange={e=>handleChange(row.id,"dateOfBirth",e.target.value)} placeholder="تاريخ الميلاد" className="p-2 border rounded"/>
                         <input value={row.stage||""} onChange={e=>handleChange(row.id,"stage",e.target.value)} placeholder="المرحلة" className="p-2 border rounded"/>
                         <input value={row.birthCertificate||""} onChange={e=>handleChange(row.id,"birthCertificate",e.target.value)} placeholder="شهادة الميلاد" className="p-2 border rounded"/>
-                        <input
-          value={row.school || ""}
-          onChange={e => handleChange(row.id, "school", e.target.value)}
-          placeholder="المدرسة"
-          className="p-2 border rounded"
-        />
+                        <input value={row.school||""} onChange={e=>handleChange(row.id,"school",e.target.value)} placeholder="المدرسة" className="p-2 border rounded"/>
                       </div>
                     </td>
                   </tr>
@@ -334,4 +374,3 @@ const getVisitsThisMonth = (visited) => {
     </div>
   );
 }
-

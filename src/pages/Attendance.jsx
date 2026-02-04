@@ -40,6 +40,8 @@ export default function AttendancePage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [showSelection, setShowSelection] = useState(false);
   const [selectedRows, setSelectedRows] = useState({});
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [openFilter, setOpenFilter] = useState(false);
 
   const rowsPerPage = 10;
   const attendanceCollection = collection(db, "attendance");
@@ -188,11 +190,28 @@ const handleUpload = async (e) => {
 };
 
 
-  const filteredChildren = useMemo(() => {
-    return children
-      .filter(c => c.name.toLowerCase().includes(search.toLowerCase()))
-      .sort((a, b) => a.name.localeCompare(b.name, "ar"));
-  }, [children, search]);
+const filteredChildren = useMemo(() => {
+  return children
+    .filter(c => {
+      // فلتر البحث بالاسم
+      const matchSearch = c.name
+        .toLowerCase()
+        .includes(search.toLowerCase());
+
+      if (!matchSearch) return false;
+
+      const day = c.days?.[selectedDate];
+
+      // فلتر الحالة
+      if (filterStatus === "present") return day?.present === true;
+      if (filterStatus === "absent") return day?.present === false;
+      if (filterStatus === "none") return !day;
+
+      return true; // all
+    })
+    .sort((a, b) => a.name.localeCompare(b.name, "ar"));
+}, [children, search, filterStatus, selectedDate]);
+
 
   const indexOfLast = currentPage * rowsPerPage;
   const indexOfFirst = indexOfLast - rowsPerPage;
@@ -242,6 +261,40 @@ const handleMoveSelected = async () => {
             placeholder="🔍 ابحث عن اسم الطفل..."
             className="p-2 border rounded-xl flex-1"
           />
+
+{/* زر فلتر صغير */}
+<div className="relative">
+  <button
+    onClick={() => setOpenFilter(!openFilter)}
+    className="px-3 py-2 border rounded-xl bg-white shadow hover:bg-gray-100 text-sm"
+  >
+    🔽 فلتر
+  </button>
+
+  {openFilter && (
+    <div className="absolute right-0 mt-2 bg-white border rounded-xl shadow-lg z-50 w-40">
+      {[
+        { label: "الكل", value: "all" },
+        { label: "الحاضرين", value: "present" },
+        { label: "الغايبين", value: "none" },
+      ].map(item => (
+        <button
+          key={item.value}
+          onClick={() => {
+            setFilterStatus(item.value);
+            setOpenFilter(false);
+            setCurrentPage(1);
+          }}
+          className={`w-full text-right px-3 py-2 hover:bg-gray-100 ${
+            filterStatus === item.value ? "bg-gray-200 font-bold" : ""
+          }`}
+        >
+          {item.label}
+        </button>
+      ))}
+    </div>
+  )}
+</div>
 
           <input
             type="date"
