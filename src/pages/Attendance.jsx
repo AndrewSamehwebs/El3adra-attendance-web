@@ -154,10 +154,12 @@ const handleUpload = async (e) => {
 
     if (!rows.length) return alert("❌ الملف فارغ");
 
-    // التحقق من الأعمدة الأساسية
+    // التحقق من الأعمدة الأساسية بدون مشاكل المسافات
     const requiredColumns = ["الاسم"];
-    const fileColumns = Object.keys(rows[0]).map(c => c.trim());
-    const missingColumns = requiredColumns.filter(c => !fileColumns.includes(c));
+    const fileColumns = Object.keys(rows[0]).map(c => c.trim().replace(/\s+/g, ""));
+    const missingColumns = requiredColumns.filter(c => 
+      !fileColumns.some(fc => fc.replace(/\s+/g, "") === c)
+    );
     if (missingColumns.length) {
       return alert(`❌ الملف غير صالح، الأعمدة المفقودة: ${missingColumns.join(", ")}`);
     }
@@ -166,7 +168,9 @@ const handleUpload = async (e) => {
     let addedCount = 0;
 
     for (const row of rows) {
-      const name = row["الاسم"]?.toString().trim();
+      // ايجاد العمود اللي فيه "الاسم" حتى لو فيه مسافات
+      const nameColumn = Object.keys(row).find(k => k.replace(/\s+/g, "") === "الاسم");
+      const name = row[nameColumn]?.toString().trim();
       if (!name) continue;
 
       const normalized = name.toLowerCase();
@@ -188,6 +192,7 @@ const handleUpload = async (e) => {
     alert("❌ حدث خطأ أثناء رفع الملف، تأكد أنه ملف إكسل صالح");
   }
 };
+
 
 
 const filteredChildren = useMemo(() => {

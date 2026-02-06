@@ -162,35 +162,38 @@ const uploadExcel = async (e) => {
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const rowsData = XLSX.utils.sheet_to_json(sheet, { defval: "", raw: false });
 
+    if (!rowsData.length) return alert("❌ الملف فارغ");
+
+    // نسخة محلية من الأسماء الموجودة بدون مشاكل المسافات
     const existingNames = new Set(children.map(c => c.name.trim().toLowerCase()));
-    const newChildren = [];
+    let addedCount = 0;
 
     for (const row of rowsData) {
-      const rawName = row["الاسم"];
-      if (!rawName) continue;
+      // ايجاد العمود اللي فيه "الاسم" حتى لو فيه مسافات
+      const nameColumn = Object.keys(row).find(k => k.replace(/\s+/g, "") === "الاسم");
+      const name = row[nameColumn]?.toString().trim();
+      if (!name) continue;
 
-      const trimmedName = rawName.toString().trim();
-      const lowerName = trimmedName.toLowerCase();
+      const normalized = name.toLowerCase();
+      if (existingNames.has(normalized)) continue;
 
-      if (existingNames.has(lowerName)) continue;
+      existingNames.add(normalized);
 
-      existingNames.add(lowerName);
-      newChildren.push({ name: trimmedName, days: {}, page: stage });
+      const newChild = { name, days: {}, page: stage };
+      const ref = await addDoc(tusbhaCollection, newChild);
+
+      setChildren(prev => [...prev, { id: ref.id, ...newChild }]);
+      addedCount++;
     }
 
-    if (newChildren.length === 0) return alert("⚠️ لا توجد بيانات صالحة للإضافة");
-
-    for (const child of newChildren) {
-      const docRef = await addDoc(tusbhaCollection, child);
-      setChildren(prev => [...prev, { id: docRef.id, ...child }]);
-    }
-
-    alert(`تم إضافة ${newChildren.length} صف جديد بنجاح ✅`);
+    alert(`✅ تم إضافة ${addedCount} صفوف جديدة بنجاح`);
   } catch (err) {
     console.error("خطأ في رفع Excel:", err);
-    alert("❌ حدث خطأ أثناء رفع الإكسل. تأكد من أن الملف صالح وعمود 'الاسم' موجود");
+    alert("❌ حدث خطأ أثناء رفع الإكسل. تأكد أن الملف صالح وعمود 'الاسم' موجود");
   }
 };
+
+
 
 
 

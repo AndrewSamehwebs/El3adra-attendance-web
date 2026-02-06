@@ -109,38 +109,47 @@ const uploadExcel = async (e) => {
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const rowsData = XLSX.utils.sheet_to_json(sheet, { defval: "", raw: false });
 
-    // نسخة محلية من الأسماء الموجودة
+    if (!rowsData.length) return alert("❌ الملف فارغ");
+
+    // التحقق من الأعمدة الأساسية بدون مشاكل المسافات
+    const requiredColumns = ["الاسم"];
+    const fileColumns = Object.keys(rowsData[0]).map(c => c.trim().replace(/\s+/g, ""));
+    const missingColumns = requiredColumns.filter(c => 
+      !fileColumns.some(fc => fc.replace(/\s+/g, "") === c)
+    );
+    if (missingColumns.length) {
+      return alert(`❌ الملف غير صالح، الأعمدة المفقودة: ${missingColumns.join(", ")}`);
+    }
+
     const existingNames = new Set(children.map(c => c.name.trim().toLowerCase()));
-    const newChildren = [];
+    let addedCount = 0;
 
     for (const row of rowsData) {
-      // تأكد إن العمود موجود
-      const rawName = row["الاسم"];
-      if (!rawName) continue;
+      // ايجاد العمود اللي فيه "الاسم" حتى لو فيه مسافات
+      const nameColumn = Object.keys(row).find(k => k.replace(/\s+/g, "") === "الاسم");
+      const name = row[nameColumn]?.toString().trim();
+      if (!name) continue;
 
-      const trimmedName = rawName.toString().trim();
-      const lowerName = trimmedName.toLowerCase();
+      const normalized = name.toLowerCase();
+      if (existingNames.has(normalized)) continue;
 
-      // منع التكرار
-      if (existingNames.has(lowerName)) continue;
+      existingNames.add(normalized);
 
-      existingNames.add(lowerName);
-      newChildren.push({ name: trimmedName, days: {}, page: stage });
+      const newChild = { name, days: {}, page: stage };
+      const ref = await addDoc(massCollection, newChild);
+
+      setChildren(prev => [...prev, { id: ref.id, ...newChild }]);
+      addedCount++;
     }
 
-    if (newChildren.length === 0) return alert("⚠️ لا توجد بيانات صالحة لإضافتها");
-
-    for (const child of newChildren) {
-      const ref = await addDoc(massCollection, child);
-      setChildren(prev => [...prev, { id: ref.id, ...child }]);
-    }
-
-    alert(`تم إضافة ${newChildren.length} صفوف جديدة بنجاح ✅`);
+    alert(`✅ تم إضافة ${addedCount} صفوف جديدة بنجاح`);
   } catch (err) {
     console.error("خطأ في رفع Excel:", err);
-    alert("❌ حدث خطأ أثناء رفع الإكسل. تأكد من أن الملف صالح وعمود 'الاسم' موجود");
+    alert("❌ حدث خطأ أثناء رفع الملف، تأكد أنه ملف إكسل صالح وعمود 'الاسم' موجود");
   }
 };
+
+
 
 
 
