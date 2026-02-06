@@ -72,47 +72,31 @@ export default function ChildrenPage() {
   };
 
   // ================= ADD =================
-const addRow = async () => {
-  const cleanName = newName.trim();
+  const addRow = async () => {
+    if (!newName.trim()) return alert("⚠️ من فضلك اكتب اسم الطفل أولاً");
+    if (rows.some(r => r.name.trim().toLowerCase() === newName.trim().toLowerCase()))
+      return alert("⚠️ الاسم موجود بالفعل");
 
-  if (!cleanName)
-    return alert("⚠️ من فضلك اكتب اسم الطفل أولاً");
+    const newRow = {
+      name: newName.trim(),
+      phone: "",
+      phone1: "",
+      phone2: "",
+      notes: "",
+      address: "",
+      dateOfBirth: "",
+      stage: "",
+      birthCertificate: "",
+      visited: {},
+      page: stage
+    };
 
-  // ✅ تحقق من Firestore لنفس الصفحة فقط
-  const q = query(
-    childrenCollection,
-    where("name", "==", cleanName),
-    where("page", "==", stage)
-  );
-
-  const snapshot = await getDocs(q);
-
-  if (!snapshot.empty)
-    return alert("⚠️ الاسم موجود بالفعل في هذه الصفحة");
-
-  const newRow = {
-    name: cleanName,
-    phone: "",
-    phone1: "",
-    phone2: "",
-    notes: "",
-    address: "",
-    dateOfBirth: "",
-    stage: "",
-    birthCertificate: "",
-    visited: {},
-    page: stage
+    const docRef = await addDoc(childrenCollection, newRow);
+    const updated = [...rows, { id: docRef.id, ...newRow }];
+    setRows(updated);
+    cachedRows.current = updated;
+    setNewName("");
   };
-
-  const docRef = await addDoc(childrenCollection, newRow);
-
-  const updated = [...rows, { id: docRef.id, ...newRow }];
-  setRows(updated);
-  cachedRows.current = updated;
-
-  setNewName("");
-};
-
 
   // ================= DELETE =================
   const handleDelete = async (id) => {
@@ -149,12 +133,7 @@ const addRow = async () => {
         const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
         if (!json.length) return alert("❌ الملف فارغ أو غير صالح");
 
-        const q = query(childrenCollection, where("page", "==", stage));
-const snapshot = await getDocs(q);
-
-const existingNames = new Set(
-  snapshot.docs.map(d => d.data().name?.trim().toLowerCase())
-);
+        const existingNames = new Set(rows.map(r => r.name.trim().toLowerCase()));
         const newRows = [];
 
         for (const row of json) {
