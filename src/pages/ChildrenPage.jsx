@@ -34,6 +34,7 @@ export default function ChildrenPage() {
 
   // ================= FETCH =================
   useEffect(() => {
+  cachedRows.current = null; // 🔥 مهم جداً
     const fetchData = async () => {
       if (cachedRows.current) {
         setRows(cachedRows.current);
