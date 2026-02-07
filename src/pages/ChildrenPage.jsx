@@ -304,6 +304,37 @@ export default function ChildrenPage() {
             اختيار الأطفال للنقل
           </button>
         </div>
+       
+
+ {/* زر النقل المقفول */}
+{showSelection && (
+  <div className="mb-4 p-4 border rounded-xl bg-gray-50 flex gap-2 items-center flex-wrap">
+    <span>نقل المحددين إلى:</span>
+
+    {/* select مقفول */}
+    <select
+      disabled
+      className="p-2 border rounded bg-gray-200 text-gray-500 cursor-not-allowed"
+    >
+      <option>اختر الصف 🔒</option>
+    </select>
+
+    {/* زر نقل مقفول */}
+    <button
+      disabled
+      className="px-4 py-2 bg-gray-400 text-white rounded cursor-not-allowed opacity-70 flex items-center gap-1"
+    >
+      🔒 مقفول
+    </button>
+
+    <button
+      onClick={() => setShowSelection(false)}
+      className="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500"
+    >
+      إلغاء
+    </button>
+  </div>
+)}
 
         {/* ===== الجدول ===== */}
         <table className="w-full border rounded-xl text-center table-fixed">
@@ -363,7 +394,7 @@ export default function ChildrenPage() {
           </tbody>
         </table>
 
-        {/* Pagination */}
+                {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex justify-center items-center gap-2 mt-6 flex-wrap">
             <button
@@ -401,5 +432,3 @@ export default function ChildrenPage() {
     </div>
   );
 }
-
-
