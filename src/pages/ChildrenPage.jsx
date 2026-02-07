@@ -364,14 +364,42 @@ export default function ChildrenPage() {
         </table>
 
         {/* Pagination */}
-        {totalPages>1 && (
-          <div className="flex justify-center gap-2 mt-4">
-            {Array.from({length: totalPages},(_,i)=>i+1).map(p=>(
-              <button key={p} onClick={()=>setCurrentPage(p)} className={`px-3 py-1 rounded border ${currentPage===p?"bg-red-800 text-white":""}`}>{p}</button>
+        {totalPages > 1 && (
+          <div className="flex justify-center items-center gap-2 mt-6 flex-wrap">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1 rounded border bg-white disabled:opacity-50"
+            >
+              السابق
+            </button>
+
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+              <button
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                className={`px-3 py-1 rounded border ${
+                  currentPage === page
+                    ? "bg-red-800 text-white"
+                    : "bg-white text-red-800 hover:bg-red-100"
+                }`}
+              >
+                {page}
+              </button>
             ))}
+
+            <button
+              onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1 rounded border bg-white disabled:opacity-50"
+            >
+              التالي
+            </button>
           </div>
         )}
       </div>
     </div>
   );
 }
+
+
