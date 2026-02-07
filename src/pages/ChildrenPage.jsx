@@ -341,7 +341,7 @@ export default function ChildrenPage() {
           <thead className="bg-red-800 text-white text-lg sticky top-0">
             <tr>
               {showSelection && <th className="p-3">اختيار</th>}
-              <th className="p-3 w-12">#</th>
+              <th className="p-3">#</th>
               <th className="p-3">الاسم</th>
               <th className="p-3">تمت الزيارة</th>
               <th className="p-3">عدد مرات الزيارات هذا الشهر</th>

@@ -271,7 +271,7 @@ const filteredChildren = useMemo(() => {
           <table className="w-full border rounded-xl text-center table-fixed">
             <thead className="bg-red-800 text-white text-lg sticky top-0">
               <tr>
-                <th className="p-3 w-12">#</th>
+                <th className="p-3">#</th>
                 <th className="p-3">الاسم</th>
                 <th className="p-3">حضور القداس</th>
                 <th className="p-3">عدد مرات الحضور هذا الشهر</th>
