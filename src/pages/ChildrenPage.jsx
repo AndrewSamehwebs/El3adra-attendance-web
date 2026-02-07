@@ -301,7 +301,7 @@ export default function ChildrenPage() {
             onClick={() => setShowSelection(true)}
             className="px-4 py-2 bg-purple-500 text-white rounded-xl"
           >
-            اختيار الأطفال للنقل
+           🔒 اختيار الأطفال للنقل
           </button>
         </div>
        
@@ -338,10 +338,10 @@ export default function ChildrenPage() {
 
         {/* ===== الجدول ===== */}
         <table className="w-full border rounded-xl text-center table-fixed">
-          <thead className="bg-red-800 text-white">
+          <thead className="bg-red-800 text-white text-lg sticky top-0">
             <tr>
               {showSelection && <th className="p-3">اختيار</th>}
-              <th className="p-3">#</th>
+              <th className="p-3 w-12">#</th>
               <th className="p-3">الاسم</th>
               <th className="p-3">تمت الزيارة</th>
               <th className="p-3">عدد مرات الزيارات هذا الشهر</th>

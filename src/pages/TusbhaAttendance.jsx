@@ -313,7 +313,7 @@ const filteredChildren = useMemo(() => {
     onClick={() => setShowSelection(true)}
     className="px-4 py-2 bg-purple-500 text-white rounded-xl hover:bg-purple-600 transition"
   >
-    اختيار الأطفال للنقل
+    🔒 اختيار الأطفال للنقل 
   </button>
 
 </div>
@@ -344,15 +344,15 @@ const filteredChildren = useMemo(() => {
 
         {/* جدول الأطفال */}
         <div className="overflow-x-auto mt-4">
-          <table className="w-full border shadow rounded-xl text-center min-w-[500px]">
+          <table className="w-full border rounded-xl text-center table-fixed">
             <thead className="bg-red-800 text-white text-lg sticky top-0">
               <tr>
                 <th className="p-3 w-12">#</th>
-                <th className="p-3 w-60">الاسم</th>
-                <th className="p-3 w-24">حضور</th>
-                <th className="p-3 w-28 text-center">عدد الحضور</th>
+                <th className="p-3">الاسم</th>
+                <th className="p-3">حضور</th>
+                <th className="p-3">عدد مرات الحضور هذا الشهر</th>
                 {showSelection && <th className="p-3 w-16">اختيار للنقل</th>}
-                <th className="p-3 w-16">حذف</th>
+                <th className="p-3">حذف</th>
               </tr>
             </thead>
             <tbody>

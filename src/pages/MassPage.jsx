@@ -233,30 +233,48 @@ const filteredChildren = useMemo(() => {
             <input type="file" accept=".xlsx,.xls" onChange={uploadExcel} className="hidden" />
           </label>
           <button onClick={resetAttendance} className="px-4 py-2 bg-yellow-500 text-white rounded-xl">🔄 إعادة ضبط</button>
-          <button onClick={() => setShowSelection(true)} className="px-4 py-2 bg-purple-500 text-white rounded-xl">اختيار للنقل</button>
+          <button onClick={() => setShowSelection(true)} className="px-4 py-2 bg-purple-500 text-white rounded-xl">🔒 اختيار الأطفال للنقل</button>
         </div>
 
-        {/* زر اختيار للنقل */}
-        {showSelection && (
-          <div className="mb-4 p-4 border rounded-xl bg-gray-50 flex gap-2 items-center">
-            <span>اختر المحددين للنقل:</span>
-            <select className="p-2 border rounded" defaultValue="">
-              <option value="" disabled>اختر الصف</option>
-            </select>
-            <button disabled className="px-4 py-2 bg-gray-400 text-white rounded cursor-not-allowed opacity-70">🔒 مقفول</button>
-            <button onClick={() => setShowSelection(false)} className="px-4 py-2 bg-gray-400 text-white rounded">إلغاء</button>
-          </div>
-        )}
+{/* زر النقل المقفول */}
+{showSelection && (
+  <div className="mb-4 p-4 border rounded-xl bg-gray-50 flex gap-2 items-center flex-wrap">
+    <span>نقل المحددين إلى:</span>
+
+    {/* select مقفول */}
+    <select
+      disabled
+      className="p-2 border rounded bg-gray-200 text-gray-500 cursor-not-allowed"
+    >
+      <option>اختر الصف 🔒</option>
+    </select>
+
+    {/* زر نقل مقفول */}
+    <button
+      disabled
+      className="px-4 py-2 bg-gray-400 text-white rounded cursor-not-allowed opacity-70 flex items-center gap-1"
+    >
+      🔒 مقفول
+    </button>
+
+    <button
+      onClick={() => setShowSelection(false)}
+      className="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500"
+    >
+      إلغاء
+    </button>
+  </div>
+)}
 
         {/* الجدول */}
         <div className="overflow-x-auto">
-          <table className="w-full border shadow rounded-xl overflow-hidden text-center min-w-[700px]">
-            <thead className="bg-red-800 text-white text-lg">
+          <table className="w-full border rounded-xl text-center table-fixed">
+            <thead className="bg-red-800 text-white text-lg sticky top-0">
               <tr>
-                <th className="p-3">#</th>
+                <th className="p-3 w-12">#</th>
                 <th className="p-3">الاسم</th>
                 <th className="p-3">حضور القداس</th>
-                <th className="p-3">عدد الشهر</th>
+                <th className="p-3">عدد مرات الحضور هذا الشهر</th>
                 {showSelection && <th className="p-3">اختيار</th>}
                 <th className="p-3">حذف</th>
               </tr>
