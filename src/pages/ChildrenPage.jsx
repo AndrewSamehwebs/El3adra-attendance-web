@@ -343,10 +343,10 @@ export default function ChildrenPage() {
               {showSelection && <th className="p-3">اختيار</th>}
               <th className="p-3">#</th>
               <th className="p-3">الاسم</th>
-              <th className="p-3">تمت الزيارة ✅</th>
+              <th className="p-3">✅ تمت الزيارة</th>
               <th className="p-3">عدد مرات الزيارات هذا الشهر</th>
               <th className="p-3">معلومات الطفل</th>
-              <th className="p-3">حذف الطفل ❌</th>
+              <th className="p-3">❌ حذف الطفل</th>
             </tr>
           </thead>
 
