@@ -255,7 +255,7 @@ const filteredChildren = useMemo(() => {
               <tr>
                 <th className="p-3">#</th>
                 <th className="p-3">الاسم</th>
-                <th className="p-3">حضور القداس ✅</th>
+                <th className="p-3">حضور القداس</th>
                 <th className="p-3">عدد الشهر</th>
                 {showSelection && <th className="p-3">اختيار</th>}
                 <th className="p-3">حذف</th>
@@ -331,4 +331,3 @@ const filteredChildren = useMemo(() => {
     </div>
   );
 }
-
