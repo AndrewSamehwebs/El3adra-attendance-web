@@ -16,6 +16,18 @@ const stageNames = {
   grade6: "سنة سادسة"
 };
 
+// ===== Arabic Normalize (بحث ذكي) =====
+const normalizeArabic = (text = "") => {
+  return text
+    .toLowerCase()
+    .replace(/[أإآ]/g, "ا")
+    .replace(/ى/g, "ي")
+    .replace(/ة/g, "ه")
+    .replace(/ؤ/g, "و")
+    .replace(/ئ/g, "ي")
+    .replace(/[^؀-ۿa-z0-9\s]/gi, "");
+};
+
 export default function ChildrenPage() {
   const { stage } = useParams();
   const [rows, setRows] = useState([]);
@@ -74,7 +86,11 @@ export default function ChildrenPage() {
   // ================= ADD =================
   const addRow = async () => {
     if (!newName.trim()) return alert("⚠️ من فضلك اكتب اسم الطفل أولاً");
-    if (rows.some(r => r.name.trim().toLowerCase() === newName.trim().toLowerCase()))
+    if (
+  rows.some(r =>
+    normalizeArabic(r.name) === normalizeArabic(newName)
+  )
+)
       return alert("⚠️ الاسم موجود بالفعل");
 
     const newRow = {
@@ -133,7 +149,7 @@ export default function ChildrenPage() {
         const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
         if (!json.length) return alert("❌ الملف فارغ أو غير صالح");
 
-        const existingNames = new Set(rows.map(r => r.name.trim().toLowerCase()));
+        const existingNames = new Set(rows.map(r => normalizeArabic(r.name)));
         const newRows = [];
 
         for (const row of json) {
@@ -165,7 +181,7 @@ export default function ChildrenPage() {
             page: stage
           };
 
-          const lowerName = newRow.name.toLowerCase();
+          const lowerName = normalizeArabic(newRow.name);
           if (existingNames.has(lowerName)) continue;
           existingNames.add(lowerName);
           newRows.push(newRow);
@@ -212,7 +228,9 @@ export default function ChildrenPage() {
   // ================= FILTERED ROWS =================
   const filteredRows = useMemo(() => {
     return rows
-      .filter(r => r.name.toLowerCase().includes(search.toLowerCase()))
+      .filter(r =>
+  normalizeArabic(r.name).includes(normalizeArabic(search))
+)
       .filter(r => {
         if (attendanceFilter === "present") return r.visited?.[selectedDay];
         if (attendanceFilter === "absent") return !r.visited?.[selectedDay];

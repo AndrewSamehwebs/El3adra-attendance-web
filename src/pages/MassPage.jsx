@@ -25,6 +25,18 @@ const STAGE_LABELS = {
   grade6: "سنة سادسة",
 };
 
+// ===== Arabic Normalize (بحث ذكي) =====
+const normalizeArabic = (text = "") => {
+  return text
+    .toLowerCase()
+    .replace(/[أإآ]/g, "ا")
+    .replace(/ى/g, "ي")
+    .replace(/ة/g, "ه")
+    .replace(/ؤ/g, "و")
+    .replace(/ئ/g, "ي")
+    .replace(/[^؀-ۿa-z0-9\s]/gi, "");
+};
+
 export default function MassPage() {
   const { stage } = useParams();
   const stageLabel = STAGE_LABELS[stage] || stage;
@@ -72,15 +84,19 @@ const addChild = async () => {
   const name = newChildName.trim();
   if (!name) return alert("⚠️ أدخل اسم الطفل");
 
-  const lowerName = name.toLowerCase();
-  const exists = children.some(c => c.name.trim().toLowerCase() === lowerName);
+  const exists = children.some(
+    c => normalizeArabic(c.name) === normalizeArabic(name)
+  );
+
   if (exists) return alert("⚠️ الاسم موجود بالفعل");
 
   const newChild = { name, days: {}, page: stage };
   const ref = await addDoc(massCollection, newChild);
+
   setChildren(prev => [...prev, { id: ref.id, ...newChild }]);
   setNewChildName("");
 };
+
 
 
   const deleteChild = async (id) => {
@@ -121,7 +137,7 @@ const uploadExcel = async (e) => {
       return alert(`❌ الملف غير صالح، الأعمدة المفقودة: ${missingColumns.join(", ")}`);
     }
 
-    const existingNames = new Set(children.map(c => c.name.trim().toLowerCase()));
+    const existingNames = new Set(children.map(c => normalizeArabic(c.name)));
     let addedCount = 0;
 
     for (const row of rowsData) {
@@ -130,7 +146,7 @@ const uploadExcel = async (e) => {
       const name = row[nameColumn]?.toString().trim();
       if (!name) continue;
 
-      const normalized = name.toLowerCase();
+      const normalized = normalizeArabic(name);
       if (existingNames.has(normalized)) continue;
 
       existingNames.add(normalized);
@@ -157,9 +173,8 @@ const filteredChildren = useMemo(() => {
   return children
     .filter(c => {
       // بحث بالاسم
-      const matchSearch = c.name
-        .toLowerCase()
-        .includes(search.toLowerCase());
+const matchSearch = normalizeArabic(c.name)
+  .includes(normalizeArabic(search));
 
       if (!matchSearch) return false;
 

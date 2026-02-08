@@ -25,6 +25,18 @@ const STAGE_LABELS = {
   grade6: "سنة سادسة",
 };
 
+// ===== Arabic Normalize (بحث ذكي) =====
+const normalizeArabic = (text = "") => {
+  return text
+    .toLowerCase()
+    .replace(/[أإآ]/g, "ا")
+    .replace(/ى/g, "ي")
+    .replace(/ة/g, "ه")
+    .replace(/ؤ/g, "و")
+    .replace(/ئ/g, "ي")
+    .replace(/[^؀-ۿa-z0-9\s]/gi, "");
+};
+
 export default function TusbhaAttendance() {
   const { stage } = useParams();
   const stageLabel = STAGE_LABELS[stage] || stage;
@@ -102,9 +114,8 @@ const addChild = async () => {
   const trimmedName = newChildName.trim();
   if (!trimmedName) return alert("⚠️ أدخل اسم الطفل");
 
-  // تأكد إن الاسم مش موجود
   const exists = children.some(
-    (c) => c.name.trim().toLowerCase() === trimmedName.toLowerCase()
+    c => normalizeArabic(c.name) === normalizeArabic(trimmedName)
   );
 
   if (exists) {
@@ -165,7 +176,7 @@ const uploadExcel = async (e) => {
     if (!rowsData.length) return alert("❌ الملف فارغ");
 
     // نسخة محلية من الأسماء الموجودة بدون مشاكل المسافات
-    const existingNames = new Set(children.map(c => c.name.trim().toLowerCase()));
+    const existingNames = new Set(children.map(c => normalizeArabic(c.name)));
     let addedCount = 0;
 
     for (const row of rowsData) {
@@ -174,10 +185,10 @@ const uploadExcel = async (e) => {
       const name = row[nameColumn]?.toString().trim();
       if (!name) continue;
 
-      const normalized = name.toLowerCase();
-      if (existingNames.has(normalized)) continue;
 
-      existingNames.add(normalized);
+const normalized = normalizeArabic(name);
+if (existingNames.has(normalized)) continue;
+existingNames.add(normalized);
 
       const newChild = { name, days: {}, page: stage };
       const ref = await addDoc(tusbhaCollection, newChild);
@@ -214,10 +225,8 @@ const uploadExcel = async (e) => {
 const filteredChildren = useMemo(() => {
   return children
     .filter(c => {
-      // بحث بالاسم
-      const matchSearch = c.name
-        .toLowerCase()
-        .includes(search.toLowerCase());
+      const matchSearch = normalizeArabic(c.name)
+        .includes(normalizeArabic(search));
 
       if (!matchSearch) return false;
 
@@ -322,9 +331,13 @@ const filteredChildren = useMemo(() => {
 {showSelection && (
   <div className="mt-4 p-4 border rounded-xl bg-gray-50 flex gap-2 items-center flex-wrap">
     <span>نقل الأطفال المحددين إلى:</span>
-    <select className="p-2 border rounded" onChange={(e) => handleCutSelected(e.target.value)} defaultValue="">
-      <option value="" disabled>اختر الصف</option>
+    <select
+      disabled
+      className="p-2 border rounded bg-gray-200 text-gray-500 cursor-not-allowed"
+    >
+      <option>اختر الصف 🔒</option>
     </select>
+
     <button
       onClick={() => alert("⚠️ هذا الزر مقفول حاليًا")}
       disabled
@@ -351,7 +364,7 @@ const filteredChildren = useMemo(() => {
                 <th className="p-3">الاسم</th>
                 <th className="p-3">حضور</th>
                 <th className="p-3">عدد مرات الحضور هذا الشهر</th>
-                {showSelection && <th className="p-3 w-16">اختيار للنقل</th>}
+                {showSelection && <th className="p-3 w-16">اختيار</th>}
                 <th className="p-3">حذف</th>
               </tr>
             </thead>
