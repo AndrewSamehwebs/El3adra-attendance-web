@@ -264,7 +264,7 @@ const filteredChildren = useMemo(() => {
   {/* السيرش أول حاجة */}
   <input
     type="text"
-    placeholder="ابحث عن اسم الطفل..."
+    placeholder="🔍 ابحث عن اسم الطفل..."
     value={search}
     onChange={(e) => setSearch(e.target.value)}
     className="p-2 border rounded-xl flex-1 min-w-[180px]"
