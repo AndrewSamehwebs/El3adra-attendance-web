@@ -228,20 +228,13 @@ existingNames.add(normalized);
 
 const filteredChildren = useMemo(() => {
   return children
+    .filter(c => normalizeArabic(c.name).includes(normalizeArabic(search)))
     .filter(c => {
-      const matchSearch = normalizeArabic(c.name)
-        .includes(normalizeArabic(search));
-
-      if (!matchSearch) return false;
-
       const day = c.days?.[selectedDate];
 
-      // فلتر الحضور
       if (filterStatus === "present") return day?.present === true;
-      if (filterStatus === "absent") return day?.present === false;
-      if (filterStatus === "none") return !day;
-
-      return true;
+      if (filterStatus === "none") return !day?.present; // هيشيل اللي checked
+      return true; // all
     })
     .sort((a, b) => a.name.localeCompare(b.name, "ar"));
 }, [children, search, filterStatus, selectedDate]);

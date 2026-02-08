@@ -206,25 +206,21 @@ existingNames.add(normalized);
 };
 
 
-
 const filteredChildren = useMemo(() => {
   return children
+    .filter(c => normalizeArabic(c.name).includes(normalizeArabic(search)))
     .filter(c => {
-      const matchSearch = normalizeArabic(c.name)
-        .includes(normalizeArabic(search));
+      const dayData = c.days?.[selectedDate];
+      const isPresent = dayData?.present === true;
 
-      if (!matchSearch) return false;
-
-      const day = c.days?.[selectedDate];
-
-      if (filterStatus === "present") return day?.present === true;
-      if (filterStatus === "absent") return day?.present === false;
-      if (filterStatus === "none") return !day;
-
-      return true;
+      if (filterStatus === "present") return isPresent;
+      if (filterStatus === "none" || filterStatus === "absent") return !isPresent;
+      return true; // all
     })
     .sort((a, b) => a.name.localeCompare(b.name, "ar"));
 }, [children, search, filterStatus, selectedDate]);
+
+
 
 
   const indexOfLast = currentPage * rowsPerPage;

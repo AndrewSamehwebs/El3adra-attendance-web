@@ -230,18 +230,19 @@ useEffect(() => {
   };
 
   // ================= FILTERED ROWS =================
-  const filteredRows = useMemo(() => {
-    return rows
-      .filter(r =>
-  normalizeArabic(r.name).includes(normalizeArabic(search))
-)
-      .filter(r => {
-        if (attendanceFilter === "present") return r.visited?.[selectedDay];
-        if (attendanceFilter === "absent") return !r.visited?.[selectedDay];
-        return true;
-      })
-      .sort((a,b) => a.name.localeCompare(b.name, "ar"));
-  }, [rows, search, attendanceFilter, selectedDay]);
+const filteredRows = useMemo(() => {
+  return rows
+    .filter(r => normalizeArabic(r.name).includes(normalizeArabic(search)))
+    .filter(r => {
+      const isPresent = r.visited?.[selectedDay] === true;
+      const isAbsent = r.visited?.[selectedDay] !== true; // اللي مش موجود أو false
+
+      if (attendanceFilter === "present") return isPresent;
+      if (attendanceFilter === "absent") return isAbsent;
+      return true; // all
+    })
+    .sort((a,b) => a.name.localeCompare(b.name, "ar"));
+}, [rows, search, attendanceFilter, selectedDay]);
 
   const indexOfLastRow = currentPage * rowsPerPage;
   const indexOfFirstRow = indexOfLastRow - rowsPerPage;

@@ -171,21 +171,13 @@ const uploadExcel = async (e) => {
 
 const filteredChildren = useMemo(() => {
   return children
+    .filter(c => normalizeArabic(c.name).includes(normalizeArabic(search)))
     .filter(c => {
-      // بحث بالاسم
-const matchSearch = normalizeArabic(c.name)
-  .includes(normalizeArabic(search));
-
-      if (!matchSearch) return false;
-
       const day = c.days?.[selectedDate];
 
-      // فلتر القداس (massPresent)
       if (filterStatus === "present") return day?.massPresent === true;
-      if (filterStatus === "absent") return day?.massPresent === false;
-      if (filterStatus === "none") return !day;
-
-      return true;
+      if (filterStatus === "none") return !day?.massPresent;
+      return true; // all
     })
     .sort((a, b) => a.name.localeCompare(b.name, "ar"));
 }, [children, search, filterStatus, selectedDate]);
