@@ -194,9 +194,9 @@ export default function ChildrenPage() {
     const data = rows.map((child, index) => ({
       "#": index + 1,
       "الاسم": child.name || "",
-      "رقم الهاتف": child.phone || "",
-      "رقم هاتف 1": child.phone1 || "",
-      "رقم هاتف 2": child.phone2 || "",
+      "رقم التلفون": child.phone || "",
+      "رقم التلفون 1": child.phone1 || "",
+      "رقم التلفون 2": child.phone2 || "",
       "العنوان": child.address || "",
       "تاريخ الميلاد": child.dateOfBirth || "",
       "المرحلة": child.stage || "",
