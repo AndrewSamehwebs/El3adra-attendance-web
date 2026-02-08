@@ -54,9 +54,11 @@ export default function AttendancePage() {
   const [selectedRows, setSelectedRows] = useState({});
   const [filterStatus, setFilterStatus] = useState("all");
   const [openFilter, setOpenFilter] = useState(false);
-
-  const rowsPerPage = 10;
   const attendanceCollection = collection(db, "attendance");
+  const rowsPerPage = 10;
+  useEffect(() => {
+  setCurrentPage(1);
+}, [search, filterStatus, selectedDate]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -268,7 +270,7 @@ const handleMoveSelected = async () => {
   {/* البحث */}
   <input
     value={search}
-    onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+    onChange={e => { setSearch(e.target.value); }}
     placeholder="🔍 ابحث عن اسم الطفل..."
     className="p-2 border rounded-xl flex-1 min-w-[180px]"
   />
@@ -276,7 +278,7 @@ const handleMoveSelected = async () => {
   {/* فلتر الحضور */}
   <select
     value={filterStatus}
-    onChange={e => { setFilterStatus(e.target.value); setCurrentPage(1); }}
+    onChange={e => { setFilterStatus(e.target.value); }}
     className="p-2 border rounded-xl"
   >
     <option value="all">الكل</option>

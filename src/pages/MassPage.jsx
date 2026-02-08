@@ -196,7 +196,9 @@ const matchSearch = normalizeArabic(c.name)
   const currentRows = filteredChildren.slice(indexOfFirst, indexOfLast);
   const totalPages = Math.ceil(filteredChildren.length / rowsPerPage);
 
-  useEffect(() => { setCurrentPage(1); }, [search]);
+  useEffect(() => {
+  setCurrentPage(1);
+}, [search, filterStatus, selectedDate]);
 
   const getMonthlyCount = (child) => {
     const [y, m] = selectedDate.split("-");

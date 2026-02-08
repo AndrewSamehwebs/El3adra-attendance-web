@@ -53,6 +53,10 @@ export default function TusbhaAttendance() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [openFilter, setOpenFilter] = useState(false);
   const rowsPerPage = 10;
+  // 🔥 ارجع لأول صفحة عند البحث أو الفلترة أو تغيير اليوم
+useEffect(() => {
+  setCurrentPage(1);
+}, [search, filterStatus, selectedDate]);
   // حساب عدد الحضور في نفس الشهر
 const getMonthlyAttendanceForChild = (child) => {
   if (!child.days || !selectedDate) return 0;

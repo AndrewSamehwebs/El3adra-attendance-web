@@ -42,6 +42,10 @@ export default function ChildrenPage() {
   const [selectedRows, setSelectedRows] = useState({});
   const rowsPerPage = 10;
   const childrenCollection = collection(db, "children");
+  // 🔥 ارجع لأول صفحة عند البحث أو الفلترة
+useEffect(() => {
+  setCurrentPage(1);
+}, [search, attendanceFilter, selectedDay]);
   const cachedRows = useRef(null);
 
   // ================= FETCH =================
